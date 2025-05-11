@@ -3,6 +3,12 @@ cache/
 data/
 logs/
 appdata/
+support/
+dist/
+appdata/
+build/
+content/
+exclude/
 
 # Distribution / packaging
 __pycache__/

@@ -17,7 +17,7 @@ call resources.bat
 cd .. 
 
 :Run
-ECHO Running application
+ECHO Running application in portable mode with debug enabled
 call "venv\Scripts\activate.bat"
 python cybercraft.py --debug --portable
 

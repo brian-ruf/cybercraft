@@ -1,0 +1,42 @@
+.vscode/
+cache/
+data/
+logs/
+appdata/
+
+# Distribution / packaging
+__pycache__/
+.pybuilder/
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+
+
+# Environments
+.env
+.env.bak
+venv/
+venv.bak/
+
+# PyInstaller
+#  Usually these files are written by a python script from a template
+#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+*.manifest
+*.spec
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+.vscode/claudesync.json

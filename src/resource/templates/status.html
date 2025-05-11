@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{title}}</title>
+    <style>
+        {{styling}}
+    </style>
+    <script>
+        console.log('Starting page load');
+        window.session_id = "{{session_id}}";
+    </script>
+</head>
+<body>
+    <h1>Processing Status</h1>
+    <p>Status: <span id="status">Initializing...</span></p>
+    <div id="messages" class="scrollable-container"></div>
+    <button onclick="button_click('close')">Close</button>
+    <button onclick="button_click('yes')">Yes</button>
+    <button onclick="processData('data')">Data</button>
+
+    <script>
+        {{bridge_code}}
+    </script>
+            
+</body>
+</html>

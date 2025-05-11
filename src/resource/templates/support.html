@@ -1,0 +1,82 @@
+  <div class="content ">
+
+  <p>Manage supported OSCAL versions.</p>
+
+    {% if not internet %}
+    <div class="notice">
+      <h2>Internet Connection Not Detected <button class="secondary-button" id="check-internet">Try Again</button></h2>
+    </div>
+    {% endif %}
+
+  <hr />
+
+  {% if versions %}
+        <!-- HTML elements to show when support.versions has content -->
+        <div class="content">
+            &nbsp;<button class="button-primary{{ '' if internet else ' disabled' }}" id="check-for-new">Check for New Versions</button>
+            &nbsp;<button class="button-primary{{ '' if internet else ' disabled' }}" id="refresh-all">Refresh All</button>
+        </div>
+
+        <div class="normal">
+            <h2>Supported Versions</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>OSCAL Version</th>
+                        <th>Release Date</th>
+                        <th>CyberCraft Learned</th>
+                        <th>&nbsp;</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for version in versions %}
+                    <tr>
+                        <td style="font-weight: bold; ">{{versions[version]["title"]}}</td>
+                        <td>{{versions[version]["released"] | convert_date(include_time=false)}}</td>
+                        <td>{{versions[version]["acquired"] | convert_date(include_time=true)}}</td>                        <td>
+                            <div class="actions">
+                                &nbsp;<button class="button-secondary{{ '' if internet else ' disabled' }}" id="refresh-{{version}}">Refresh {{version}}</button>
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    {% else %}
+        <!-- HTML elements to show when support.versions is empty -->
+        <div class="normal">
+            <h2>Not Initialized</h2>
+            <h3>No supported versions loaded.</h3>
+            <button class="button-primary{{ '' if internet else ' disabled' }}" id="refresh-all">Initialize</button>
+        </div>
+
+    {% endif %}
+
+    <br />
+    {% if not internet %}
+    <div class="notice">
+      <h2>Internet Connection Not Detected <button class="secondary-button" id="check-internet">Try Again</button></h2>
+      <p>While an Internet conneciton is not required to use CyberCraft,
+      it is required for CyberCraft to refresh existing OSCAL resources or 
+      learn new OSCAL versions.</p>
+      <p>As an alternative, you can run CyberCraft on an Internet-connected 
+      workstation to update it's OSCAL support resources, then copy the
+     <code>support.oscal</code> file to this workstation.</p>
+    </div><br />
+    {% endif %}
+
+    <div class="additional-information">
+      <h2>Additional Information</h2>
+      <p>NIST provides syntax validation and format converstion resources for 
+        each OSCAL model and version.</p>
+
+      <p>CyberCraft manages these resources, so you don't have to!</p>
+
+      <div class="callout">
+        CyberCraft is currently using the support module located at:<br />
+          <code>{{support_file}}</code>
+      </div>
+    </div>
+  </div>

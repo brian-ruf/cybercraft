@@ -1,0 +1,185 @@
+
+/* ======================================================================= */
+/* CONCEPT AUTOMATION STYLING */
+/* ======================================================================= */
+/* 
+.container {
+    position: relative;
+    width: 400px;
+    height: 400px;
+    margin: 50px auto;
+    border: 1px solid #ccc;
+    background-color: #88c3d7;
+  }
+
+  .project-box {
+    position: absolute;
+    width: 110px;
+    height: 270px;
+    border: 4px solid #050203;
+    left: 145px;
+    top: 65px;
+    opacity: 0;
+    text-align: center;
+    padding-top: 5px;
+    font-family: Arial, sans-serif;
+    font-size: 13.2px;
+    font-weight: bold;
+    background-color: #dcdbd7;
+    color: #050203;
+    border-radius: 4px;
+  }
+
+  .small-box {
+    position: absolute;
+    width: 90px;
+    height: 25px;
+    border: none;
+    text-align: center;
+    line-height: 25px;
+    font-family: Arial, sans-serif;
+    font-size: 12px;
+    opacity: 0;
+    background-color: #073b4c;
+    color: white;
+    border-radius: 4px;
+  }
+
+  .arrow {
+    position: absolute;
+    height: 2px;
+    background-color: #050203;
+    transform-origin: left center;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .arrow::after {
+    content: '';
+    position: absolute;
+    right: -5px;
+    top: -4px;
+    width: 0;
+    height: 0;
+    border-left: 8px solid #050203;
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+  }
+
+  .fade-in {
+    opacity: 1;
+    transition: opacity 1s;
+  }
+
+  .slide-right {
+    transition: left 1s;
+    left: 155px !important;
+  } */
+
+/* ======================================================================= */
+/* END CONCEPT AUTOMATION STYLING */
+/* ======================================================================= */
+
+/* ======================================================================= */
+/* CONCEPT AUTOMATION STYLING */
+/* ======================================================================= */
+
+/* Target the specific container for our animation */
+#main .container {
+    position: relative !important;
+    width: 400px !important;
+    height: 400px !important;
+    margin: 50px auto !important;
+    border: 1px solid #ccc !important;
+    background-color: #88c3d7 !important;
+    display: block !important;
+    overflow: visible !important;
+    flex: none !important;
+}
+
+/* Ensure the content wrapper doesn't interfere */
+#main .content-wrapper {
+    overflow: visible !important;
+}
+
+/* Make main scrollable */
+#main {
+    overflow: auto !important;
+}
+
+/* Project box styling */
+#main .container .project-box {
+    position: absolute !important;
+    width: 110px !important;
+    height: 270px !important;
+    border: 4px solid #050203 !important;
+    left: 145px !important;
+    top: 65px !important;
+    text-align: center !important;
+    padding-top: 5px !important;
+    font-family: Arial, sans-serif !important;
+    font-size: 13.2px !important;
+    font-weight: bold !important;
+    background-color: #dcdbd7 !important;
+    color: #050203 !important;
+    border-radius: 4px !important;
+    z-index: 2 !important;
+}
+
+/* Small box styling */
+#main .container .small-box {
+    position: absolute !important;
+    width: 90px !important;
+    height: 25px !important;
+    border: none !important;
+    text-align: center !important;
+    line-height: 25px !important;
+    font-family: Arial, sans-serif !important;
+    font-size: 12px !important;
+    background-color: #073b4c !important;
+    color: white !important;
+    border-radius: 4px !important;
+    z-index: 3 !important;
+}
+
+/* Arrow styling */
+#main .container .arrow {
+    position: absolute !important;
+    height: 2px !important;
+    background-color: #050203 !important;
+    transform-origin: left center !important;
+    pointer-events: none !important;
+    z-index: 4 !important;
+}
+
+#main .container .arrow::after {
+    content: '' !important;
+    position: absolute !important;
+    right: -5px !important;
+    top: -4px !important;
+    width: 0 !important;
+    height: 0 !important;
+    border-left: 8px solid #050203 !important;
+    border-top: 5px solid transparent !important;
+    border-bottom: 5px solid transparent !important;
+}
+
+/* Animation classes */
+#main .container .fade-in {
+    opacity: 1 !important;
+    transition: opacity 1s !important;
+}
+
+#main .container .slide-right {
+    transition: left 1s !important;
+    left: 155px !important;
+}
+
+/* Initial states */
+#main .container .project-box,
+#main .container .small-box,
+#main .container .arrow {
+    opacity: 0;
+    transition: opacity 1s, left 1s;
+}

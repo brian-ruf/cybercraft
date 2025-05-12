@@ -31,7 +31,7 @@ To run CyberCraft, either:
 - double-click on the executable from your file explorer; or 
 - run it from the command line.
 
-Read the [File Locations](./docs/FILE_LOCATIONS.md) information for details about where CyberCraft stores its files.
+Read the [File Locations](./FILE_LOCATIONS.md) information for details about where CyberCraft stores its files.
 
 ## Compiling Yourself
 

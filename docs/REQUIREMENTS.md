@@ -1,5 +1,26 @@
 # REQUIREMENMTS
 
+The requirements discussed here are for self-compilied or native python execution of CyberCraft.
+
+For pre-compiled CyberCraft executables, please see the [notes](#pre-compiled-cybercraft-executables) at the bottom. 
+
+## Table of Contents
+
+Please see each of the following sections for more information:
+- [Requirements Summary](#requirements-summary)
+- [Platforms](#platforms)
+- [Python and PySide6](#python-and-pyside6)
+- [Internet Connection](#internet-connection)
+- [CyberCraft Pre-Compiled Executables](#pre-compiled-cybercraft-executables)
+
+## Requirements Summary
+
+CyberCraft is designed to run on Windows 10+ and macOS 13+ using Python 3.12+. 
+
+CyberCraft may run on Linux and Android without much modification and these are target platforms for Q4 2025.
+
+While an Internet connection is not required for normal op9eration, it is required to clone/update the repo, download Python dependencies. A few featurs application require an Internet connection, such as checking for new versions of OSCAL.j
+
 # Platforms
 
 CyberCraft is designed and developed for Windows 10+ and macOS 13+. It may also work on recent Linux distros.
@@ -31,6 +52,14 @@ Testing on Python 3.13 is planned for Summer 2025.
 
 The current version of PySide6 requires Python 3.7 or later.While CyberCraft may work with Python versions earlier than 3.12, no testing has been conducted, nor is testing of earlier Python versions planned.
 
+## Check Your Python Version
+After cloning the repository:
+- switch to the `cybercraft` repository folder and type `python --version` to ensure Python is installed and accessible via the CLI. 
+
+```
+cd cybercraft
+python --version
+```
 
 # Internet Connection
 An internet is required to:
@@ -41,6 +70,14 @@ An internet is required to:
 
 OSCAL support files from the NIST OSCAL GitHub repository are pre-loaded into CyberCraft. For this feature, an Internet connection is only necessary to check for new OSCAL versions or refresh/repair the support files for a current OSCAL version.
 
-# CyberCraft Pre-Compiled Executables
+# Pre-Compiled CyberCraft Executables
 
-There are no special requirements to download and install a pre-compiled version of CyberCraft on your Windows or macOS.
+The only requirement for pre-compiled CyberCraft executables is a supported [platform](#platforms). No other software is required.
+
+- There is **no** installer. 
+- Python is **not* required.
+- Administrative access is **not** required. 
+- Once downloaded, an Internet connection is **not** required for normal use.
+  - Some features, such as checking for a new OSCAL version, require an Internet connection. 
+
+Contact your employer's IT department if CyberCraft is blocked from running on your workstation.

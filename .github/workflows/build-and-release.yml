@@ -28,6 +28,7 @@ jobs:
 
       - name: Compile Windows Executable
         run: |
+          cd src
           .\src\compile.bat
 
       - name: Upload Windows Executable
@@ -58,7 +59,8 @@ jobs:
 
       - name: Compile macOS Executable
         run: |
-          chmod +x ./src/compile.sh
+          cd src
+          chmod +x *.sh resource/*.sh
           ./src/compile.sh
 
       - name: Upload macOS Executable

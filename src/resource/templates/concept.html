@@ -1,0 +1,112 @@
+
+
+  <div class="container">
+    <div class="project-box">Project</div>
+    <div class="small-box" id="catalog">Catalog</div>
+    <div class="small-box" id="profile">Profile</div>
+    <div class="small-box" id="ssp">SSP</div>
+    <div class="small-box" id="ap">AP</div>
+    <div class="small-box" id="ar">AR</div>
+    <div class="arrow" id="arrow1"></div>
+    <div class="arrow" id="arrow2"></div>
+    <div class="arrow" id="arrow3"></div>
+    <div class="arrow" id="arrow4"></div>
+  </div>
+  <script>
+if (!window.startAnimationProcess) {
+    // Helper function for sleep/delay
+    function sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    // Arrow update function
+    function updateArrow(fromEl, toEl, arrowEl) {
+        const containerRect = document.querySelector('.container').getBoundingClientRect();
+        const fromRect = fromEl.getBoundingClientRect();
+        const toRect = toEl.getBoundingClientRect();
+        
+        const fromX = fromRect.left - containerRect.left;
+        const fromY = fromRect.top - containerRect.top;
+        const toX = toRect.left - containerRect.left;
+        const toY = toRect.top - containerRect.top;
+        
+        const startX = fromX + (fromRect.width / 2);
+        const startY = fromY;
+        const endX = toX + (toRect.width / 2);
+        const endY = toY + toRect.height;
+        
+        const angle = Math.atan2(endY - startY, endX - startX);
+        const length = Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2));
+        
+        arrowEl.style.width = `${length}px`;
+        arrowEl.style.left = `${startX}px`;
+        arrowEl.style.top = `${startY}px`;
+        arrowEl.style.transform = `rotate(${angle}rad)`;
+    }
+
+    // Function to check if elements are ready
+    function checkAndStartAnimation() {
+        console.log("Checking for elements...");
+        const requiredElements = [
+            '.project-box',
+            '#catalog',
+            '#profile',
+            '#ssp',
+            '#ap',
+            '#ar',
+            '#arrow1',
+            '#arrow2',
+            '#arrow3',
+            '#arrow4'
+        ];
+
+        const allElementsPresent = requiredElements.every(selector => {
+            const element = document.querySelector(selector);
+            console.log(`Checking ${selector}: ${element !== null}`);
+            return element !== null;
+        });
+
+        if (allElementsPresent) {
+            runAnimation();
+            return true;
+        }
+        return false;
+    }
+
+    // Main animation function
+    async function runAnimation() {
+        console.log("Starting animation sequence");
+        const projectBox = document.querySelector('.project-box');
+        const sspBox = document.getElementById('ssp');
+        const profileBox = document.getElementById('profile');
+        const catalogBox = document.getElementById('catalog');
+        const apBox = document.getElementById('ap');
+        const arBox = document.getElementById('ar');
+        const arrow1 = document.getElementById('arrow1');
+        const arrow2 = document.getElementById('arrow2');
+        const arrow3 = document.getElementById('arrow3');
+        const arrow4 = document.getElementById('arrow4');
+
+        // Animation sequence...
+        await sleep(500);
+        projectBox.classList.add('fade-in');
+        await sleep(1000);
+        
+        // Rest of animation steps...
+    }
+
+    // Create the global function
+    window.startAnimationProcess = function() {
+        console.log('Animation process triggered');
+        if (!checkAndStartAnimation()) {
+            setTimeout(window.startAnimationProcess, 100);
+        }
+    };
+
+    // Process any queued functions if they exist
+    if (window.startupFunctions && typeof window.processStartupFunctions === 'function') {
+        window.processStartupFunctions();
+    }
+}
+
+  </script>

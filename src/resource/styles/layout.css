@@ -1,0 +1,594 @@
+
+/* ======================================================================= */
+/* LAYOUT STYLING */
+/* ======================================================================= */
+
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    line-height: 1.15; /* 1 */
+    -webkit-text-size-adjust: 100%; /* 2 */
+    overflow: hidden;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    height: 100vh;
+}
+
+.header {
+    /* padding: 0.25rem; */
+    padding: 0;  /* Remove padding */
+    margin: 0;   /* Remove margin */
+    text-align: center;
+    flex-shrink: 0;
+
+    width: 100%;  /* Ensure full width */
+}
+
+
+.container {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    min-height: 0;
+    position: relative;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+
+    justify-content: center; /* Center horizontally */
+    /* align-items: center; */ /* Center vertically */
+    /* height: 100vh; */ /* Ensure the container takes the full height of the viewport */
+
+}
+
+.content-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    overflow: hidden;
+}
+
+
+/* Main content */
+#main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1; 
+    overflow-y: scroll !important;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    min-height: 0; 
+
+    scrollbar-width: thin; /* For Firefox */
+    -webkit-overflow-scrolling: touch;
+    scrollbar-gutter: stable;
+    justify-content: flex-start;
+}
+
+/* For WebKit browsers (Chrome, Safari) */
+#main::-webkit-scrollbar {
+    -webkit-appearance: none;
+    width: 14px;
+    background-color: #f5f5f5;
+}
+
+#main::-webkit-scrollbar-thumb {
+    border-radius: 7px;
+    border: 4px solid #f5f5f5;
+    background-color: #073b4c;
+}
+
+#main::-webkit-scrollbar-track {
+    background-color: #f5f5f5;
+    border-radius: 7px;
+}
+
+#main .content {
+    width: 100%;
+    max-width: 1200px;
+    padding: 0 2rem;
+    box-sizing: border-box; 
+    align-items: center;
+    display: flex;
+    flex-direction: column;
+    text-align: center;
+}
+
+#main .content > div:first-of-type {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    width: 100%;
+    margin: 1rem 0;
+    flex-direction: row;
+    align-items: center;
+}
+
+#main .content hr {
+    width: 100%;
+    margin: 1rem 0;
+}
+
+
+/* Table styles */
+table {
+    border-collapse: separate;
+    margin: 0;
+    padding: 0;
+    width: auto;
+    max-width: 100%;
+    border-spacing: 0; 
+}
+
+code {
+    font-size: 1.1em;
+    font-family: 'Courier New', Courier, monospace;
+}
+
+.codeblock {
+    font-size: 1.1em;
+    font-family: 'Courier New', Courier, monospace;
+}
+
+table th,
+table td {
+    padding: 0.75rem 0.5rem;
+}
+
+/* Aside accordion styles */
+.side {
+    width: 250px;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.side-header {
+    padding: 1rem;
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+}
+
+.side-toggle {
+    margin-right: 0.5rem;
+    transition: transform 0.3s ease;
+}
+
+.side.closed .side-toggle {
+    transform: rotate(-90deg);
+}
+
+.side-content {
+    padding: 1rem;
+    overflow-y: auto;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+    max-height: calc(100vh - 150px);
+}
+
+.side.closed {
+    width: 40px;
+}
+
+.side.closed .side-content {
+    opacity: 0;
+    pointer-events: none;
+}
+
+
+p, h1, h2, h3, h4, h5, h6 {
+    line-height: 1.5; 
+    margin-bottom: 0.5em; 
+}
+
+.additional-information {
+    padding: 0.5rem;
+    margin: 0.5rem;
+}
+
+.normal {
+    padding: 1rem;
+    margin: 1rem 0;
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+}
+
+.callout {
+    padding: 1rem;
+    margin: 1rem 0;
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+}
+
+.notice {
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+}
+
+/* =========================================================== */
+/* Buttons */
+
+.button-primary {
+    padding: 10px 20px;
+    font-size: 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin: 0 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.button-secondary {
+    padding: 10px 20px;
+    font-size: 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin: 0 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.button-danger {
+    padding: 10px 20px;
+    font-size: 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin: 0 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.disabled {
+    pointer-events: none; 
+    opacity: 0.5; 
+    cursor: not-allowed; 
+}
+
+/* =========================================================== */
+/* Status area */
+.status {
+    flex-shrink: 0;
+    position: relative;
+    transition: height 0.3s ease;
+    /* display: flex; */
+    flex-direction: column;
+    height: 200px; 
+    margin: 0;  /* Remove margin */
+    width: 100%;  /* Ensure full width */
+}
+
+.status.collapsed {
+    height: 2.5rem !important;
+}
+
+.status-header {
+    flex: 0 0 auto;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: left;
+    user-select: none;
+    z-index: 2;
+    /* height: 1.2rem;  */
+    margin: 0;  /* Remove margin */
+    width: 100%;  /* Ensure full width */
+}
+
+.status-content {
+    padding: 1rem;
+    position: relative;
+    max-height: 75%; 
+    overflow-y: scroll !important;
+    overflow-x: hidden;
+    height: 100%; 
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    margin: 0;
+    width: 100%;
+    box-sizing: border-box;
+    -webkit-overflow-scrolling: touch;
+
+    scrollbar-width: thin;
+    scrollbar-gutter: stable;
+}
+
+/* WebKit scrollbar styling for status content */
+.status-content::-webkit-scrollbar {
+    -webkit-appearance: none;
+    width: 14px;
+    background-color: #f5f5f5;
+}
+
+.status-content::-webkit-scrollbar-thumb {
+    border-radius: 7px;
+    border: 4px solid #f5f5f5;
+    background-color: #073b4c;
+}
+
+.status-content::-webkit-scrollbar-track {
+    background-color: #f5f5f5;
+    border-radius: 7px;
+}
+
+.status-message {
+    /* overflow-y: visible !important; Change from scroll to visible */
+    overflow-x: hidden;
+    position: relative;
+    margin: 0.25rem 0;
+    padding: 0.25rem;
+    border-radius: 4px;
+    width: 100%;
+    box-sizing: border-box;
+    flex: 0 0 auto; /* Prevent flex stretching - size based on content */
+    min-height: fit-content; /* Ensure height matches content */
+    height: auto; 
+
+    overflow: visible;
+}
+
+
+.status.collapsed .status-content {
+    display: none;
+}
+
+.resize-handle {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    cursor: ns-resize;
+    z-index: 3; 
+}
+
+.status-toggle {
+    margin-right: 0.5rem;
+    transition: transform 0.3s ease;
+}
+
+.status.collapsed .status-toggle {
+    transform: rotate(-90deg);
+}
+
+/* Arrow rotation */
+.status-toggle {
+    display: inline-block;
+    transition: transform 0.3s ease;
+}
+
+.status.collapsed .status-toggle {
+    transform: rotate(-90deg);
+}
+
+/* Footer */
+.footer { 
+    padding: 1rem;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.layout-hidden {
+    display: none !important;
+}
+
+/* Footer overlap fix */
+.container {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    min-height: 0;
+    position: relative;
+
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+}
+
+/* Snackbars */
+.snackbar {
+    visibility: hidden;
+    min-width: 250px;
+    max-width: 90%;
+    text-align: center;
+    border-radius: 4px;
+    padding: 16px;
+    position: fixed;
+    z-index: 1000;
+    right: 20px;
+    top: 20px;
+    font-size: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    opacity: 0;
+    transition: visibility 0s, opacity 0.3s linear;
+  }
+
+  .snackbar.show {
+    visibility: visible;
+    opacity: 1;
+  }
+
+  .snackbar-close {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 0 0 0 16px;
+    margin: 0;
+    line-height: 1;
+  }
+
+  .snackbar-close:hover {
+    opacity: 0.8;
+
+}
+/* Banners */
+
+
+/* Waiting spinner */
+#spinner-container {
+    position: fixed;  /* Changed from absolute to fixed */
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    display: none;
+    z-index: 1000;
+    background-color: rgba(0, 0, 0, 0.5);
+    justify-content: center;
+    align-items: center;
+}
+
+#spinner-container.spinning {
+    display: flex;
+}
+
+.processing-spinner {
+    width: 100px;
+    height: 100px;
+    position: relative;
+    animation: processing 1.2s linear infinite;
+    transform-style: preserve-3d;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.processing-spinner img {
+    width: 100px;  /* Fixed size */
+    height: 100px;
+    object-fit: contain;
+    transform-origin: center center;  /* Ensure rotation happens from center */
+}
+
+@keyframes processing {
+    0% { transform: rotate(0deg); }
+    20% { transform: rotate(360deg); }
+    55% { transform: rotate(360deg); } 
+    100% { transform: rotate(360deg); }
+}
+
+.icon {
+    width: 24px;
+    height: 24px;
+    -webkit-mask-size: contain;
+    mask-size: contain;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+    background-color: currentColor; /* This will be affected by the color property */
+    fill: currentColor;
+  }
+
+.icon-circle {
+    -webkit-mask-image: url('img/icons/circle.svg');
+    mask-image: url('img/icons/circle.svg');
+}
+
+.icon-export {
+    -webkit-mask-image: url('img/icons/export.svg');
+    mask-image: url('img/icons/export.svg');
+}
+
+.icon-minus {
+    -webkit-mask-image: url('img/icons/minus.svg');
+    mask-image: url('img/icons/minus.svg');
+}
+
+.icon-open {
+    /* Existing styles */
+    -webkit-mask-image: url('img/icons/open.svg');
+    mask-image: url('img/icons/open.svg');
+}
+
+.icon-placeholder {
+    -webkit-mask-image: url('img/icons/placeholder.svg');
+    mask-image: url('img/icons/placeholder.svg');
+}
+
+.icon-plus {
+    -webkit-mask-image: url('img/icons/plus.svg');
+    mask-image: url('img/icons/plus.svg');
+}
+
+.icon-oscal-ap {
+    -webkit-mask-image: url('img/icons/oscal-ap.svg');
+    mask-image: url('img/icons/oscal-ap.svg');
+}
+
+.icon-oscal-ar {
+    -webkit-mask-image: url('img/icons/oscal-ar.svg');
+    mask-image: url('img/icons/oscal-ar.svg');
+}
+
+.icon-oscal-catalog {
+    -webkit-mask-image: url('img/icons/oscal-catalog.svg');
+    mask-image: url('img/icons/oscal-catalog.svg');
+}
+
+.icon-oscal-cdef {
+    -webkit-mask-image: url('img/icons/oscal-cdef.svg');
+    mask-image: url('img/icons/oscal-cdef.svg');
+}
+
+.icon-oscal-poam {
+    -webkit-mask-image: url('img/icons/oscal-poam.svg');
+    mask-image: url('img/icons/oscal-poam.svg');
+}
+
+.icon-oscal-profile {
+    -webkit-mask-image: url('img/icons/oscal-profile.svg');
+    mask-image: url('img/icons/oscal-profile.svg');
+}
+
+.icon-oscal-ssp {
+    -webkit-mask-image: url('img/icons/oscal-ssp.svg');
+    mask-image: url('img/icons/oscal-ssp.svg');
+}
+
+
+.valid-icon {
+color: #4caf50; /* Default green */
+}
+.valid-icon:hover {
+color: #388e3c; /* Darker green on hover */
+}
+
+.invalid-icon {
+    color: #f44336; /* Default red */
+}
+.invalid-icon:hover {
+    color: #d32f2f; /* Darker red on hover */
+}
+/* ======================================================================= */
+/* TEMPORARY STYLES */
+
+
+/* ======================================================================= */
+/* END LAYOUT STYLING */
+/* ======================================================================= */

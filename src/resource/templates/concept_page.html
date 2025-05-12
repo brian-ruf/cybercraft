@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>{{title}}</title>
+  {{styling}}
+  <style>
+
+body {
+    background-color: #88c3d7 !important;
+    align: center !important;
+}
+
+.container {
+    position: relative !important;
+    width: 600px !important;
+    height: 400px !important;
+    margin: 17.5px auto !important;  /* Reduced from 50px to 17.5px (65% reduction) */
+    border: none !important;
+    background-color: #88c3d7 !important;
+    display: block !important;
+    overflow: visible !important;
+}
+
+/* Center the project box */
+.project-box {
+    position: absolute !important;
+    width: 110px !important;
+    height: 270px !important;
+    border: 4px solid #050203 !important;
+    left: 240px !important;  /* Centered horizontally ((600 - 110) / 2) */
+    top: 55px !important;
+    text-align: center !important;
+    padding-top: 5px !important;
+    font-family: Arial, sans-serif !important;
+    font-size: 14px !important;
+    font-weight: bold !important;
+    background-color: #dcdbd7 !important;
+    color: #050203 !important;
+    border-radius: 4px !important;
+    opacity: 0;
+    transition: opacity 1s !important;
+}
+
+/* Initial position for small boxes (further left) */
+.small-box {
+    position: absolute !important;
+    width: 90px !important;
+    height: 25px !important;
+    border: none !important;
+    text-align: center !important;
+    line-height: 25px !important;
+    font-family: Arial, sans-serif !important;
+    font-size: 14px !important;
+    /*
+    background-color: #073b4c !important;
+    color: white !important;
+    */
+    border-radius: 4px !important;
+    opacity: 0;
+    transition: opacity 1s, left 1s !important;
+}
+
+/* Update slide-right position */
+.slide-right {
+    left: 255px !important;  /* Aligned with project box center */
+}
+
+.text-box {
+    position: absolute !important;
+    width: 200px !important;
+    height: 45px !important;
+    right: -50px !important;
+    font-size: 14px !important;
+    /*
+    border: 2px solid #050203 !important;
+    background-color: white !important;
+    */
+    border-radius: 4px !important;
+    padding: 10px !important;
+    opacity: 0;
+    transition: opacity 1s !important;
+}
+
+/* Animation classes */
+.fade-in {
+    opacity: 1 !important;
+}
+
+/* Arrow styles */
+.arrow {
+    position: absolute !important;
+    height: 2px !important;
+    background-color: #050203 !important;
+    transform-origin: left center !important;
+    pointer-events: none !important;
+    opacity: 0;  /* Start invisible */
+    z-index: 10 !important;
+    transition: opacity 1s !important;
+}
+
+.arrow::after {
+    content: '' !important;
+    position: absolute !important;
+    right: -8px !important;
+    top: -4px !important;
+    width: 0 !important;
+    height: 0 !important;
+    border-left: 8px solid #050203 !important;
+    border-top: 5px solid transparent !important;
+    border-bottom: 5px solid transparent !important;
+}
+
+.header-content {
+    text-align: center !important;
+    width: 100% !important;
+    margin: 7px 0 !important;  /* Reduced from 20px to 7px (65% reduction) */
+}
+
+.footer-content {
+    text-align: center !important;
+    opacity: 0;
+    width: 100% !important;
+    margin: 7px 0 !important;  /* Reduced from 20px to 7px (65% reduction) */
+}
+
+.header-content h1 {
+    margin-bottom: 10px !important;
+}
+
+.header-content p {
+    margin: 0 !important;
+    font-size: 1.1em !important;
+}
+
+@keyframes flash-highlight {
+    0% { background-color: transparent; }
+    25% { background-color: rgba(255, 255, 255, 0.5); }
+    50% { background-color: transparent; }
+    75% { background-color: rgba(255, 255, 255, 0.3); }
+    100% { background-color: transparent; }
+}
+
+.flash-attention {
+    animation: flash-highlight 1.5s ease-in-out;
+}
+
+.footer-content {
+    text-align: center !important;
+    width: 150px !important;
+    margin: 20px auto !important;
+    padding: 10px !important;
+    opacity: 0;
+    width: 100% !important;
+    margin: 7px 0 !important;
+    transition: opacity 1s, background-color 0.5s !important;
+}
+
+
+  </style>
+</head>
+<body>
+<script>
+console.log("Page starting...");
+{# document.addEventListener('DOMContentLoaded', function() {
+    console.log("Checking elements:");
+    console.log("Project box:", document.querySelector('.project-box'));
+    console.log("SSP box:", document.getElementById('ssp'));
+    console.log("Profile box:", document.getElementById('profile'));
+    console.log("Catalog box:", document.getElementById('catalog'));
+    console.log("AP box:", document.getElementById('ap'));
+    console.log("AR box:", document.getElementById('ar'));
+}); #}
+</script>
+<div class="header-content" style="text-align: center; width: 100%; margin: 20px 0;">
+    <h1>OSCAL Projects</h1>
+    <p>CyberCraft treats a collection of related OSCAL files as a project.</p>
+</div>
+
+<div id="buttons" class="footer-content" style="text-align: center; width: 100%; margin: 20px 0;">
+    <p>Create a New OSCAL project or open existing project.<br />
+    Create or import OSCAL files from within an OSCAL project.</p>
+    <button class="button-primary" id="new">New Project</button>&nbsp;&nbsp;<button class="button-primary" id="open">Open Project</button>
+</div>
+
+ <div class="container">
+    <div class="project-box">Project</div>
+    <div class="small-box controls-model" id="catalog">Catalog</div>
+    <div class="small-box controls-model" id="profile">Profile</div>
+    <div class="small-box implementation-model" id="ssp">SSP</div>
+    <div class="small-box assessment-model" id="ap">AP</div>
+    <div class="small-box assessment-model" id="ar">AR</div>
+    <div class="arrow" id="arrow1"></div>
+    <div class="arrow" id="arrow2"></div>
+    <div class="arrow" id="arrow3"></div>
+    <div class="arrow" id="arrow4"></div>
+    
+    <!-- Text boxes -->
+    <div class="text-box" id="ssp-text" style="top: 50px;">
+    When you bring one file into the project ...
+    </div>
+    <div class="text-box" id="profile-text" style="top: 125px;">
+    ... it will automatically bring in the related files ...
+    </div>
+    <div class="text-box" id="catalog-text" style="top: 200px;">
+    ... as needed to assemble the OSCAL stack.
+    </div>
+
+    <div class="text-box" id="ap-text" style="top: 275px;">
+    Additional files can be brought in as needed.
+    </div>
+
+</div>
+
+  <script>
+        {{bridge_code}}
+
+
+function logElementPosition(el, name) {
+    if (!el) {
+        console.log(`${name} element not found`);
+        return;
+    }
+    const rect = el.getBoundingClientRect();
+    console.log(`${name} position:`, {
+        left: rect.left,
+        top: rect.top,
+        width: rect.width,
+        height: rect.height
+    });
+}
+
+window.addEventListener('load', async function() {
+    console.log("Window loaded, starting animation setup");
+    
+    function sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    function updateArrow(fromEl, toEl, arrowEl, fromBottom = false, toTop = false) {
+        if (!fromEl || !toEl || !arrowEl) return;
+        
+        const containerRect = document.querySelector('.container').getBoundingClientRect();
+        const fromRect = fromEl.getBoundingClientRect();
+        const toRect = toEl.getBoundingClientRect();
+        
+        const fromX = fromRect.left - containerRect.left;
+        const fromY = fromRect.top - containerRect.top;
+        const toX = toRect.left - containerRect.left;
+        const toY = toRect.top - containerRect.top;
+        
+        let startX = fromX + (fromRect.width / 2);
+        let startY = fromY;
+        let endX = toX + (toRect.width / 2);
+        let endY = toY + toRect.height;
+        
+        // If arrow should start from bottom of element
+        if (fromBottom) {
+            startY = fromY + fromRect.height - 2; // Start 2px higher from the bottom
+        }
+        
+        // If arrow should point to top of element
+        if (toTop) {
+            endY = toY + 4; // End 4px higher from the top
+        }
+        
+        // Calculate the angle and length
+        const angle = Math.atan2(endY - startY, endX - startX);
+        let length = Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2));
+        
+        // Adjust the length to stop at the target div's border
+        if (toTop) {
+            // Account for the arrow head (typically 8px)
+            const arrowHeadLength = 8;
+            length -= arrowHeadLength;
+        }
+        
+        arrowEl.style.width = `${length}px`;
+        arrowEl.style.left = `${startX}px`;
+        arrowEl.style.top = `${startY}px`;
+        arrowEl.style.transform = `rotate(${angle}rad)`;
+    }
+
+    async function runAnimation() {
+        console.log("Starting animation sequence");
+        
+        // Get all elements
+        const projectBox = document.querySelector('.project-box');
+        const sspBox = document.getElementById('ssp');
+        const profileBox = document.getElementById('profile');
+        const catalogBox = document.getElementById('catalog');
+        const apBox = document.getElementById('ap');
+        const arBox = document.getElementById('ar');
+        const arrow1 = document.getElementById('arrow1');
+        const arrow2 = document.getElementById('arrow2');
+        const arrow3 = document.getElementById('arrow3');
+        const arrow4 = document.getElementById('arrow4');
+
+        // Get text boxes
+        const sspText = document.getElementById('ssp-text');
+        const profileText = document.getElementById('profile-text');
+        const catalogText = document.getElementById('catalog-text');
+        const apText = document.getElementById('ap-text');
+        const arText = document.getElementById('ar-text');
+        const buttons = document.getElementById('buttons');
+
+        try {
+            console.log("Starting project box fade in");
+            projectBox.classList.add('fade-in');
+            await sleep(5000);
+
+            // SSP sequence
+            console.log("Positioning and showing SSP box");
+            sspBox.style.left = '100px';  // Further left
+            sspBox.style.top = '182px';  // Middle position + 40px
+            sspBox.classList.add('fade-in');
+            sspText.classList.add('fade-in');
+            await sleep(2500);
+
+            console.log("Sliding SSP box");
+            sspBox.classList.add('slide-right');
+            await sleep(2500);
+
+            // Profile sequence - NOW BELOW SSP
+            console.log("Showing Profile box");
+            profileBox.style.left = '100px';  // Further left
+            profileBox.style.top = '227px';  // Below SSP + 40px
+            profileBox.classList.add('fade-in');
+            profileText.classList.add('fade-in');
+            await sleep(2500);
+
+            console.log("Drawing SSP to Profile arrow");
+            updateArrow(sspBox, profileBox, arrow1, true, true);  // from bottom of SSP to top of Profile
+            arrow1.classList.add('fade-in');
+            await sleep(2500);
+
+            console.log("Sliding Profile box");
+            profileBox.classList.add('slide-right');
+            let arrowInterval1 = setInterval(() => updateArrow(sspBox, profileBox, arrow1, true, true), 16);
+            await sleep(2500);
+            clearInterval(arrowInterval1);
+            updateArrow(sspBox, profileBox, arrow1, true, true);
+
+            // Catalog sequence - NOW BELOW PROFILE
+            console.log("Showing Catalog box");
+            catalogBox.style.left = '100px';  // Further left
+            catalogBox.style.top = '272px';  // Below Profile + 40px
+            catalogBox.classList.add('fade-in');
+            catalogText.classList.add('fade-in');
+            await sleep(2500);
+
+            console.log("Drawing Profile to Catalog arrow");
+            updateArrow(profileBox, catalogBox, arrow2, true, true);  // from bottom of Profile to top of Catalog
+            arrow2.classList.add('fade-in');
+            await sleep(2500);
+
+            console.log("Sliding Catalog box");
+            catalogBox.classList.add('slide-right');
+            let arrowInterval2 = setInterval(() => updateArrow(profileBox, catalogBox, arrow2, true, true), 16);
+            await sleep(2500);
+            clearInterval(arrowInterval2);
+            updateArrow(profileBox, catalogBox, arrow2, true, true);
+
+            // AP sequence - NOW ABOVE SSP
+            console.log("Showing AP box");
+            apBox.style.left = '255px';  // Aligned with project box
+            apBox.style.top = '137px';  // Above SSP + 40px
+            apBox.classList.add('fade-in');
+            apText.classList.add('fade-in');
+            await sleep(1000);
+
+            console.log("Drawing AP to SSP arrow");
+            updateArrow(apBox, sspBox, arrow3, true, true);  // from bottom of AP to top of SSP
+            arrow3.classList.add('fade-in');
+            await sleep(1500);
+
+            // AR sequence - NOW ABOVE AP
+            console.log("Showing AR box");
+            arBox.style.left = '255px';  // Aligned with project box
+            arBox.style.top = '92px';  // Above AP + 40px
+            arBox.classList.add('fade-in');
+            await sleep(1000);
+
+            console.log("Drawing AR to AP arrow");
+            updateArrow(arBox, apBox, arrow4, true, true);  // from bottom of AR to top of AP
+            arrow4.classList.add('fade-in');
+
+            // In your runAnimation function, update the buttons section:
+            await sleep(3000);
+            buttons.classList.add('fade-in');
+            await sleep(100); // Small delay to ensure fade-in is visible first
+            buttons.classList.add('flash-attention');
+            
+            console.log("Animation sequence complete");
+        } catch (error) {
+            console.error('Animation error:', error);
+        }
+    }
+
+    // Start animation with a small delay to ensure everything is loaded
+    await sleep(500);
+    console.log("Starting animation");
+    runAnimation();
+});
+
+  </script>
+</body>
+</html>

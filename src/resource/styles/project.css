@@ -1,0 +1,107 @@
+.model-box {
+    border: 0px;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    font-weight: bold;
+    border: 3px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    position: relative; /* Required for positioning icons */
+}
+
+.icon {
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    background-size: contain;
+    background-repeat: no-repeat;
+}
+
+.icon.top-left {
+    top: 0;
+    left: 0;
+}
+
+.icon.bottom-right {
+    bottom: 0;
+    right: 0;
+}
+
+.unpopulated {
+    opacity: 0.65;
+}
+.unpopulated:hover {
+    opacity: 1;
+}
+
+.hidden {
+    display: none;
+}
+.populated {
+    opacity: 1;
+}
+.populated:hover {
+    opacity: 0.8;
+}
+
+.project-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: minmax(80px, auto) minmax(80px, auto) minmax(80px, auto) minmax(80px, auto);
+    gap: 0px;
+    column-gap: 4px;
+    width: 80%;
+    max-width: 400px;
+    margin: 20px auto 10px auto;
+    justify-self: center;
+}
+
+.project-container > div {
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.assessment-results {
+    background-color: #d0c2e9;
+    grid-column: 2 / 3;
+    grid-row: 1 / 2;
+    border: solid #6e4daa;
+}
+
+.assessment-plan {
+    background-color: #d0c2e9;
+    grid-column: 2 / 3;
+    grid-row: 2 / 3;
+    border: solid #6e4daa;
+}
+
+.poam {
+    background-color: #d0c2e9;
+    grid-column: 3 / 4;
+    grid-row: 2 / 3;
+    border: solid #6e4daa;
+}
+
+.cdef {
+    background-color: #b4d0b9;
+    grid-column: 1 / 2;
+    grid-row: 3 / 4;
+    border: solid #006823;
+}
+
+.system-security-plan {
+    background-color: #b4d0b9;
+    grid-column: 2 / 4;
+    grid-row: 3 / 4;
+    border: solid #006823;
+}
+
+.controls {
+    background-color: #aacdec;
+    grid-column: 1 / 4;
+    grid-row: 4 / 5;
+    border: solid #0068be;
+}
+

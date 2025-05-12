@@ -1,0 +1,255 @@
+/* ======================================================================= */
+/* DARK THEME STYLING: COLORS AND FONTS */
+/* ======================================================================= */
+
+html, body {
+    font-family: Arial, sans-serif;
+    background: #1a1a1a;
+}
+
+#main {
+    background: #1a1a1a;
+    color: #ffffff;
+    scrollbar-color: #118ab2 #2d2d2d; /* For Firefox */
+}
+
+#main content {
+    background: #1a1a1a;
+    color: #ffffff;
+    scrollbar-color: #118ab2 #2d2d2d; /* For Firefox */
+}
+
+#header {
+    background: #118ab2 !important;
+    color: #ffffff !important;
+}
+
+#footer {
+    background: #118ab2 !important;
+    color: #ffffff !important;
+}
+
+#side {
+    background: #118ab2 !important;
+    color: #ffffff !important;
+}
+
+.additional-information {
+    background-color: #1e3a5f;
+    border-left-color: #64b5f6;
+}
+
+.callout {
+    background-color: #2d2d2d;
+    border-left: 5px solid #64b5f6;
+}
+
+.notice {
+    background-color: #c62828;
+    border-left-color: #64b5f6;
+    color: white;
+}
+
+.button-primary {
+    background: #118ab2;
+    color: #ffffff;
+}
+
+.button-primary:hover {
+    background-color: #073b4c;
+}
+
+.button-secondary {
+    background: #2d2d2d;
+    color: #118ab2;
+    border-color: #118ab2;
+}
+
+.button-secondary:hover {
+    background-color: #118ab2;
+    color: #ffffff;
+    border-color: #118ab2;
+}
+
+.button-danger {
+    background: #ef476f;
+    color: #ffffff;
+}
+
+.button-danger:hover {
+    background-color: #fde9ee;
+    color: #050203;
+}
+
+.status {
+    background-color: #2d2d2d;
+    border-top: 1px solid #404040;
+}
+
+.status-header {
+    background-color: #333333;
+    border-bottom: 1px solid #404040;
+}
+
+.status-header:hover {
+    background-color: #404040;
+}
+
+#status-area {
+    background-color: #2d2d2d;
+    border-top: 1px solid #404040;
+}
+
+/* Info message styling */
+.status-message.info {
+    background-color: #1e3a5f;
+    color: #90caf9;
+    border-left: 4px solid #64b5f6;
+}
+
+/* Warning message styling */
+.status-message.warning {
+    background-color: #3e2f23;
+    color: #ffb74d;
+    border-left: 4px solid #ffa726;
+}
+
+/* Error message styling */
+.status-message.error {
+    background-color: #3e2828;
+    color: #ef9a9a;
+    border-left: 4px solid #e57373;
+}
+
+.resize-handle {
+    background-color: transparent;
+}
+
+.resize-handle:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.resize-handle.active {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.resize-handle:hover,
+.resize-handle.active {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+#main::-webkit-scrollbar-track {
+    background: #2d2d2d;
+}
+
+#main::-webkit-scrollbar-thumb {
+    background-color: #118ab2;
+    border: #2d2d2d;
+}
+
+/* Table styling */
+table thead tr {
+    border-bottom: 2px solid #118ab2;
+}
+
+table th {
+    border-bottom: 2px solid #118ab2;
+    background-color: #1a1a1a;
+}
+
+table tbody tr:nth-child(even) {
+    background-color: #2d2d2d;
+}
+
+/* Snackbar styling */
+.snackbar {
+    background-color: #333333;
+    color: #ffffff;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+}
+
+.snackbar.success {
+    background-color: #2e7d32;
+}
+
+.snackbar.error {
+    background-color: #c62828;
+}
+
+.snackbar.info {
+    background-color: #1976d2;
+}
+
+.snackbar.warning {
+    background-color: #f57c00;
+}
+
+.snackbar-close {
+    color: #ffffff;
+}
+
+/* Good/Caution/Bad styling */
+
+.good {
+    color: #026c50;
+}
+
+
+.caution {
+    /* background-color: #ffd166; */
+    color: #ffd166; /* #050203; */
+}
+
+.bad {
+    color: #7c0521;
+}
+
+.good-shade {
+    background-color: #b7fdeb;
+    color: #050203;
+}
+
+.caution-shade {
+    background-color: #ffe9b4;
+    color: #050203;
+}
+
+.bad-shade {
+    background-color: #fde9ee;
+    color: #050203;
+}
+
+.error-field {
+    background-color: #fde9ee;
+    border: 1px solid #ef476f;
+    color: #050203;
+}
+
+/* NIST OLSCAL Colors */
+.assessment-layer {
+    background-color: #E6E6FA; /* Light purple */
+}
+
+.assessment-model {
+    background-color: #d0c2e9; /* purple */
+}
+
+.implementation-layer {
+    background-color: #E0F0E0; /* Light green */
+}
+
+.implementation-model {
+    background-color: #b3cfb8; /* green */
+}
+
+.controls-layer {
+    background-color: #E6F0FF; /* Light blue */
+}
+
+.controls-model {
+    background-color: #aacdec; /* blue */
+}
+
+/* ======================================================================= */
+/* END DARK THEME STYLING */
+/* ======================================================================= */

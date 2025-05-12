@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{title}}</title>
+    {{styling}}
+</head>
+<body id="body">
+    <header class="header" id="header">
+        <h1>&nbsp;</h1>
+    </header>
+
+    <div class="container" id="container">
+        <aside class="side" id="side">
+            <div class="side-header">
+                <span class="side-toggle">▼</span>
+                <span id="side-title">&nbsp;</span>
+            </div>
+            <div class="side-content" id="side-content">&nbsp;</div>
+        </aside>
+
+        <div class="content-wrapper">
+            <div id="spinner-container">
+                <div class="processing-spinner">
+                    <img src="resource:/img/CC_Logo3.svg" alt="Spinning icon">
+                </div>
+            </div>
+            <main class="main" id="main">
+                <div>&nbsp;</div>
+            </main>
+
+            <div class="status" id="status">
+                <div class="resize-handle"></div>
+                <div class="status-header">
+                    <span class="status-toggle">▼</span>
+                    <span>Notifications</span>
+                </div>
+                <div class="status-content" id="status-content">&nbsp;</div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer" id="footer">
+        &nbsp;
+    </footer>
+
+    <script>
+        {{bridge_code}}
+        
+        // Layout control function with added statusOpen parameter
+        function toggleLayout({
+            header = true,
+            footer = true,
+            status = true,
+            aside = true,
+            asideOpen = true,
+            statusOpen = true
+        } = {}) {
+            // Get all layout elements
+            const headerElement = document.querySelector('.header');
+            const footerElement = document.querySelector('.footer');
+            const statusElement = document.querySelector('.status');
+            const asideElement = document.querySelector('.side');
+
+            // Helper function to toggle visibility
+            const toggleVisibility = (element, show) => {
+                if (!element) return; // Safety check if element doesn't exist
+                
+                if (show) {
+                    element.classList.remove('layout-hidden');
+                } else {
+                    element.classList.add('layout-hidden');
+                }
+            };
+
+            // Toggle basic elements
+            toggleVisibility(headerElement, header);
+            toggleVisibility(footerElement, footer);
+            toggleVisibility(statusElement, status);
+            toggleVisibility(asideElement, aside);
+
+            // Handle aside open/closed state
+            if (asideElement && aside) {
+                if (asideOpen) {
+                    asideElement.classList.remove('closed');
+                } else {
+                    asideElement.classList.add('closed');
+                }
+            }
+
+            // Handle status open/closed state
+            if (statusElement && status) {
+                if (statusOpen) {
+                    statusElement.classList.remove('collapsed');
+                    // Restore saved height if it exists
+                    const savedHeight = statusElement.getAttribute('data-saved-height');
+                    if (savedHeight) {
+                        statusElement.style.height = savedHeight;
+                    }
+                } else {
+                    // Save current height before collapsing if not already collapsed
+                    if (!statusElement.classList.contains('collapsed')) {
+                        const currentHeight = getComputedStyle(statusElement).height;
+                        statusElement.setAttribute('data-saved-height', currentHeight);
+                    }
+                    statusElement.classList.add('collapsed');
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Status area functionality
+            const statusDiv = document.querySelector('.status');
+            const handle = document.querySelector('.resize-handle');
+            const statusHeader = document.querySelector('.status-header');
+            let isResizing = false;
+            let startY;
+            let startHeight;
+            let savedHeight;
+
+            // Set initial height for status area
+            statusDiv.style.height = '150px';
+
+            // Resize functionality
+            handle.addEventListener('mousedown', function(e) {
+                if (statusDiv.classList.contains('collapsed')) return;
+                isResizing = true;
+                startY = e.clientY;
+                startHeight = parseInt(getComputedStyle(statusDiv).height, 10);
+                
+                handle.classList.add('active');
+                e.preventDefault();
+            });
+
+            document.addEventListener('mousemove', function(e) {
+                if (!isResizing) return;
+                
+                const deltaY = startY - e.clientY;
+                const newHeight = Math.max(50, startHeight + deltaY);
+                
+                statusDiv.style.height = newHeight + 'px';
+                // Save height to data attribute for toggleLayout function
+                statusDiv.setAttribute('data-saved-height', newHeight + 'px');
+            });
+
+            document.addEventListener('mouseup', function() {
+                isResizing = false;
+                handle.classList.remove('active');
+            });
+
+            // Status accordion functionality
+            statusHeader.addEventListener('click', function() {
+                if (statusDiv.classList.contains('collapsed')) {
+                    statusDiv.classList.remove('collapsed');
+                    const savedHeight = statusDiv.getAttribute('data-saved-height');
+                    if (savedHeight) {
+                        statusDiv.style.height = savedHeight;
+                    }
+                } else {
+                    statusDiv.setAttribute('data-saved-height', getComputedStyle(statusDiv).height);
+                    statusDiv.classList.add('collapsed');
+                }
+            });
+
+            // Aside accordion functionality
+            const aside = document.querySelector('.side');
+            const asideHeader = document.querySelector('.side-header');
+            
+            if (asideHeader) {
+                asideHeader.addEventListener('click', () => {
+                    aside.classList.toggle('closed');
+                });
+            }
+
+            // Initialize layout with desired state
+            toggleLayout({
+                header: false,
+                footer: false,
+                status: false,
+                aside: false,
+                asideOpen: false,
+                statusOpen: false
+            });
+        });
+    </script>
+</body>
+</html>

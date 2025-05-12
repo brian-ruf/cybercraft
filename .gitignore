@@ -3,7 +3,8 @@ cache/
 data/
 logs/
 appdata/
-support/
+src/support
+src/support/*.oscal
 dist/
 appdata/
 build/

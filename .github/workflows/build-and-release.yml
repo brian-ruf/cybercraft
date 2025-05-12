@@ -32,7 +32,7 @@ jobs:
           .\src\compile.bat
 
       - name: Upload Windows Executable
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: CyberCraft-Windows
           path: src\dist\CyberCraft.exe
@@ -64,7 +64,7 @@ jobs:
           ./src/compile.sh
 
       - name: Upload macOS Executable
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: CyberCraft-macOS
           path: src/dist/CyberCraft

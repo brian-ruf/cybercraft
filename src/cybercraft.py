@@ -29,7 +29,6 @@ from oscal_support import OSCAL_support
 from oscal_project_class import OSCAL_project
 
 logger.remove()
-
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # APPLICATION LOCATION
 APP_LOCATION = lfs.get_app_location()
@@ -47,7 +46,7 @@ LOG_APP_FORMAT_DEBUG = "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{leve
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # APPLICATION DEFAULTS
 APP_NAME = "CyberCraft"
-APP_VERSION = "1.0.0--alpha"
+APP_VERSION = "1.0.0-alpha.1"
 APP_VERSION_DATE = "2025-05-15"
 APP_DESCRIPTION = "A desktop application for viewing, validating and converting content expressed using the Open Security Controls Assessment Language (OSCAL)"
 APP_FILE_ROOT = "cybercraft" # for files and folders (prefer no spaces)
@@ -104,6 +103,7 @@ class app_control:
         self.shared_locations = [] # Path to shared location
         self.config["user"] = {}
         self.config["user"]["id"]       = {"data" : misc.get_user_information(), "label" : "User's login ID"}
+        # TODO: Handle user details
         # self.config["user"]["name"]     = {"data" : "", "label" : "User's Name"}
         # self.config["user"]["initials"] = {"data" : "", "label" : "User's Initials"}
         # self.config["user"]["email"]    = {"data" : "", "label" : "User's Email Address"}
@@ -219,16 +219,17 @@ class app_control:
             sys.exit(0)
 
         # if the metaschema argument is passed, learn the specified OSCAL extension 
-        if self.args.metaschema:
-            status = False
-            if self.args.metaschema != "":
-                if lfs.chkfile(self.args.metaschema):
-                    logger.info("Learning an OSCAL extension " + self.args.metaschema)
-                    logger.warning("FUTURE CAPABILITY -- NOT YET IMPLEMENTED")
-                else:
-                    logger.error(f"Unable to find {self.args.metaschema}. Please check location and access rights.")
-            else:
-                logger.error("Must identify a metaschema file to learn.")
+        # if self.args.metaschema:
+        #     status = False
+        #     logger.info("METASCHEMA HANDELING IS NOT YET IMPLEMENTED")
+        #     sys.exit(0)
+        #     if self.args.metaschema != "":
+        #         if lfs.chkfile(self.args.metaschema):
+        #             logger.info("Learning an OSCAL extension " + self.args.metaschema)
+        #         else:
+        #             logger.error(f"Unable to find {self.args.metaschema}. Please check location and access rights.")
+        #     else:
+        #         logger.error("Must identify a metaschema file to learn.")
 
         # if a filename is passed, open the file
         # TODO: Detect if an native OSCAL file or a project file
@@ -262,21 +263,23 @@ class app_control:
     
     # -------------------------------------------------------------------------
     def __startup_arguments(self):
-       # Get Runtime Arguments and Parameters
+        # Get Runtime Arguments and Parameters
         parser = argparse.ArgumentParser(
             prog=APP_NAME,
             description=APP_DESCRIPTION,
+            add_help=False,
             epilog="CyberCraft is created by Ruf Risk (https://RufRisk.com) - (c) 2024 Ruf Risk, LLC")
-        parser.add_argument("-v",  '--version',         dest="version",            help='Report the application vesion and exit.',                 action="version", version=f"{APP_NAME} {APP_VERSION} ({APP_VERSION_DATE})")
-        parser.add_argument("-i",  '--info',            dest="info",               help='Reportsthe application configuration and exit.',          action="store_true")
+        parser.add_argument("-h",  '--help',            default=argparse.SUPPRESS, help='Show this help message and exit.',                        action="help")
+        parser.add_argument("-v",  '--version',         dest="version",            help='Report the application version and exit.',                action="version", version=f"{APP_NAME} {APP_VERSION} ({APP_VERSION_DATE})")
+        parser.add_argument("-i",  '--info',            dest="info",               help='Report the application configuration and exit.',          action="store_true")
         parser.add_argument("-ln", '--learn-new',       dest="learn_oscal_latest", help='Learn recently released OSCAL version(s) and exit.',      action="store_true")
         parser.add_argument("-la", '--learn-all',       dest="learn_oscal_all",    help='Re-learn all OSCAL versions and exit.',                   action="store_true")
-        parser.add_argument("-lx", '--learn-extension', dest="metaschema",         help='Learn an OSCAL extension in metaschema format and exit.', type=str)
-        parser.add_argument("-d",  '--debug',           dest="debug",              help='Run the applicaiton with debugging turned on.',           action="store_true")
+        # parser.add_argument("-lx", '--learn-extension', dest="metaschema",         help='Learn an OSCAL extension in metaschema format and exit.', type=str)
+        parser.add_argument("-d",  '--debug',           dest="debug",              help='Run the application with debugging turned on.',           action="store_true")
         parser.add_argument("-p",  '--portable',        dest="portable",           help='Run the application in portable mode.',                   action="store_true")
         if not self.__production:
             parser.add_argument( '--production',        dest="production",         help='Set logging as if the application was in production.',    action="store_true")
-        parser.add_argument("filename",       nargs='?',                           help='Load the OSCAL File or Project. May include path.',       default=None)
+        parser.add_argument("filename",       nargs='?',                           help='Load an OSCAL Project.',                                  default=None)
         self.args = parser.parse_args()
 
         if not self.__production:
@@ -288,11 +291,10 @@ class app_control:
             logger.debug("PORTABLE MODE: " + misc.iif(self.portable_mode, "YES", "NO"))
 
         # If an argument is passed that does not require the GUI, set the cli_only flag
-        if self.args.info or self.args.learn_oscal_latest or self.args.learn_oscal_all or self.args.metaschema:
+        if self.args.info or self.args.learn_oscal_latest or self.args.learn_oscal_all: # or self.args.metaschema:
             self.cli_only = True
         else:
             self.cli_only = False
-
     # -------------------------------------------------------------------------
     # TODO: gracefully handle locations that "should" exist, but don't (ie %APPDATA% or ~)
     async def __setup_folders(self):
@@ -486,6 +488,7 @@ async def main():
             exit_code = await cybercraft_gui.desktop_startup(app_instance)
             return exit_code
     except SystemExit:
+        logger.error("SystemExit exception caught. Exiting application.")
         pass
 
     # added this to handle exceptions
@@ -495,13 +498,9 @@ async def main():
 if __name__ == "__main__":
     try:
         exit_code = asyncio.run(main())
+        logger.info(f"Application exited with code: {exit_code}")
         sys.exit(exit_code)
     except Exception as e:
         logger.error(f"Fatal error: {e}")
         sys.exit(1)
 
-# if __name__ == '__main__':
-#     exit_code  = 0
-
-#     # Run the main function
-#     sys.exit(asyncio.run(main()))

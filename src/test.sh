@@ -1,7 +1,10 @@
 #!/bin/bash
 clear
 
-export DEBUG=False
+echo "Clearing Logs"
+rm -f appdata/logs/*.log
+
+export DEBUG=True
 
 if [ -d "venv" ]; then
     echo "Virtual environment found."
@@ -15,6 +18,6 @@ cd resource
 bash resources.sh
 cd ..
 
-echo "Running application"
+echo "Running application in portable mode with debug enabled"
 source venv/bin/activate
-python cybercraft.py %@
+python cybercraft.py --debug --portable %@

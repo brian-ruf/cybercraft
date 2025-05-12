@@ -9,7 +9,6 @@ You have three options for using CyberCraft:
 ## Pre-Compiled (Planned: Summer 2025)
 Download a pre-compliled executable for Windows or macOS.
 
-### Getting Started
 _Links will be provided here when available._
 
 Pre-compiled CyberCraft is designed to run as a stand-alone executable. 
@@ -27,51 +26,74 @@ To install CyberCraft:
 1. download the executable
 2. move it from your Downloads folder to an appropriate location on your computer.
 
-To run CyberCraft, either:
-- double-click on the executable from your file explorer; or 
-- run it from the command line.
+See the [Starting](./STARTING.md) information for details about how to start CyberCraft.
 
-Read the [File Locations](./FILE_LOCATIONS.md) information for details about where CyberCraft stores its files.
+See the [File Locations](./FILE_LOCATIONS.md) information for details about where CyberCraft stores its files.
 
-## Compiling Yourself
+## Compile Yourself or Run Native Python
 
-Complile the Python code to an executable for your Windows or macOS platform.
+The following steps allow you to compile CyberCraft to an executable for your platform or run the Python code natively without compiling it.
 
+### 1. Clone the repository to your workstaton
 
-
-
-
-## Run CyberCraft Python Native
-
-The following steps allow you to run the Python code without compiling it.
-
-### Windows
-Perform the following from the command line within the local CyberCraft repository folder:
-1. CD to the `src` folder
-2. Type `run` to execute the `run.bat` file
+From the command line interface (CLI) select an appropriate locaiton for the repository. 
 
 ```
-cd src
-run
+cd /your/github/repositories/folder
+git clone https://github.com/ruf-risk/cybercraft.git
 ```
 
-### macOS
+### 2. Change directory (CD) into the `src` directory. If running on macOS, set execute permissions.
 
-#### Set Execute Permissions
-After cloning the repository to your Mac, you must first give execute permissions to the following bash scripts:
-  - `src/install-vent.sh`
-  - `src/run.sh`
-  - `src/compile-dev.sh`
-  - `src/compile-prod.sh`
-  - `src/resource/resources.sh`
-
-Perform the following from the command line within the local CyberCraft repository folder:
-1. CD to the `src` folder
-2. Set permissions on the bash files.
-
+#### Windows
 ```
-cd src
+cd cybercraft\src
+```
+
+#### macOS
+```
+cd cybercraft/src
 chmod +x *.sh resource/*.sh
 ```
 
-#### To run CyberCraft
+### 3. Use the appropriate script to compile or run CyberCraft
+
+#### Windows
+Compile to a Windows binary:
+```
+compile.bat
+```
+
+Run Python code natively:
+```
+run.bat
+```
+
+
+#### macOS
+Compile to a macOS binary:
+```
+./compile.sh
+```
+
+Run Python code natively:
+```
+./run.sh
+```
+
+### 4. Run CyberCraft
+
+See [Starting](./STARTING.md) for information on how to start CyberCraft in normal or portable mode, as well as other command-line options.
+
+# All Scripts
+Each of the following scripts has a Windows version, ending in `.bat` and a macOS/Bash version ending in `.sh`. 
+
+  - `src/run`: Runs the native CyberCraft Python code.
+  - `src/test`: Runs the native CyberCraft Python code in porable mode with debugging enabled.
+
+  - `src/compile`: Compiles CyberCraft to a stand-alone executable for your platform
+  - `src/compile-dev`: Compiles CyberCraft to a stand-alone executable with additional debugging capabilities.
+
+  - `src/install-venv`: Installs PyInstaller and all CyberCraft Python dependencies. This is called by the run, test and complile scripts, but may be run manually. 
+  - `src/resource/resources`: Creates `src/resource_rc.py`, which includes all of the files in `src/resource` child folders, effectively embedding these files into the application code. This is a PySide6 capability, and is required to achieve a stand-alone executable. This is called by the run, test and complile scripts, but may be run manually.
+

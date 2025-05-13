@@ -137,7 +137,7 @@ def initialize(backend):
         <div class="content">
             <div class="splash_logo_container">
             <div class="splash_logo">
-                <img src="resource:/img/CC_Logo3.svg" alt="Spinning Logo">
+                <img src="resource:/img/CC_Logo.svg" alt="Spinning Logo">
             </div>
             </div>
             <h1>CyberCraft</h1>

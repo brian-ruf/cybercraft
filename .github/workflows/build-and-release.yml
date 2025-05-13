@@ -1,6 +1,9 @@
 name: Build and Release
 
 on:
+  push:
+    tags:
+      - 'v*' # Trigger only on tags that start with "v"
   pull_request:
     branches:
       - main
@@ -27,21 +30,31 @@ jobs:
           pip install pyinstaller
         working-directory: src
 
-      - name: Debug File Location
-        run: |
-          dir
-        working-directory: src
-
       - name: Compile Windows Executable
         run: |
           .\compile.bat
         working-directory: src
 
-      - name: Upload Windows Executable
-        uses: actions/upload-artifact@v4
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        if: startsWith(github.ref, 'refs/tags/v') # Only run on tag pushes
         with:
-          name: CyberCraft-Windows
-          path: src\dist\CyberCraft.exe
+          tag_name: ${{ github.ref_name }} # Automatically use the current tag
+          release_name: CyberCraft ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Windows Executable
+        uses: actions/upload-release-asset@v1
+        if: startsWith(github.ref, 'refs/tags/v') # Only run on tag pushes
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: src\dist\CyberCraft.exe
+          asset_name: CyberCraft.exe
+          asset_content_type: application/octet-stream
 
   build-macos:
     name: Build macOS Executable
@@ -64,8 +77,6 @@ jobs:
           pip install pyinstaller
         working-directory: src
 
-
-        
       - name: Compile macOS Executable
         run: |
           chmod +x *.sh resource/*.sh
@@ -73,7 +84,10 @@ jobs:
         working-directory: src
 
       - name: Upload macOS Executable
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-release-asset@v1
+        if: startsWith(github.ref, 'refs/tags/v') # Only run on tag pushes
         with:
-          name: CyberCraft-macOS
-          path: src/dist/CyberCraft
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: src/dist/CyberCraft
+          asset_name: CyberCraft
+          asset_content_type: application/octet-stream

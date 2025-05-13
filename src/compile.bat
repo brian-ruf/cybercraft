@@ -27,6 +27,7 @@ pyinstaller --onefile --clean --log-level INFO  ^
             --name=CyberCraft ^
             --console ^
             --icon=resource\img\favicon.ico ^
+            --noupx ^
             cybercraft.py  
 
 :Run    

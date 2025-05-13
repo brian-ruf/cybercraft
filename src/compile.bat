@@ -31,9 +31,13 @@ pyinstaller --onefile --clean --log-level INFO  ^
 
 :Run    
 if ERRORLEVEL 0 (
-    cd dist
-    cybercraft.exe --portable --debug
-    cd ..
+    echo "Compilation successful."
+    echo "Executable file created in the dist directory."
+    echo "You can run the application by executing the following command:"
+    echo "dist\CyberCraft"
+) else (
+    echo Compilation failed. Please check the error messages above.
+    exit /b 1
 )
 
 

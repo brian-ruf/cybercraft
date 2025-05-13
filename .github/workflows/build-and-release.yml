@@ -27,9 +27,14 @@ jobs:
           pip install pyinstaller
         working-directory: src
 
+      - name: Debug File Location
+        run: |
+          dir
+        working-directory: src
+
       - name: Compile Windows Executable
         run: |
-          compile.bat
+          .\compile.bat
         working-directory: src
 
       - name: Upload Windows Executable
@@ -59,6 +64,8 @@ jobs:
           pip install pyinstaller
         working-directory: src
 
+
+        
       - name: Compile macOS Executable
         run: |
           chmod +x *.sh resource/*.sh

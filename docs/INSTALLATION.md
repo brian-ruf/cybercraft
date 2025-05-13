@@ -1,12 +1,16 @@
 # Installation and Getting Started
 
 You have three options for using CyberCraft:
-- **Pre-Compiled**: Download a pre-compliled executable for Windows or macOS. (_Planned: Summer 2025_)
+- **Pre-Compiled**: Download a pre-compliled executable for Windows or macOS. (_Signed executables planned for late summer 2025_)
 - **Complile Yourself**: Complile the Python code to an executable for your Windows or macOS platform.
 - **Native Python**: Run the native Python code on your Windows or macOS platform. 
   - _May work on Linux. Untested._
 
 ## Pre-Compiled (Planned: Summer 2025)
+
+_Signed executables are planned for late summer 2025._
+Until that time, macOS users will need to run the native Python code.
+
 Download a pre-compliled executable for Windows or macOS.
 
 _Links will be provided here when available._

@@ -203,14 +203,17 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            const tagName = context.ref.replace('refs/tags/', '');
+            const releaseId = '${{ needs.create-release.outputs.release_id }}';
+            
             await github.rest.repos.updateRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              release_id: ${{ needs.create-release.outputs.release_id }},
-              body: `## CyberCraft ${{ github.ref_name }}
+              release_id: releaseId,
+              body: `## CyberCraft ${tagName}
               
               ### Downloads:
-              - **macOS 13+**: [CyberCraft](https://github.com/${{context.repo.owner}}/${{context.repo.repo}}/releases/download/${{ needs.create-release.outputs.release_id }}/CyberCraft)
-              - **Windows 10+**: [CyberCraft.exe](https://github.com/${{context.repo.owner}}/${{context.repo.repo}}/releases/download/${{ needs.create-release.outputs.release_id }}/CyberCraft.exe)
-            `
+              - **macOS 13+**: [CyberCraft](https://github.com/${context.repo.owner}/${context.repo.repo}/releases/download/${tagName}/CyberCraft)
+              - **Windows 10+**: [CyberCraft.exe](https://github.com/${context.repo.owner}/${context.repo.repo}/releases/download/${tagName}/CyberCraft.exe)
+              `
             });

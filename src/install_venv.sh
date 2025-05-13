@@ -50,13 +50,13 @@ echo "continuing"
 source venv/bin/activate
 
 echo "Checking for PIP upgrade in virtual environment"
-python -m pip install --upgrade pip
+${PYTHON_CMD} -m pip install --upgrade pip
 
 echo "Installing requirements.txt"
-python -m pip install -r requirements.txt
+${PYTHON_CMD} -m pip install -r requirements.txt
 
 echo "Installing pyinstaller"
-python -m pip install pyinstaller
+${PYTHON_CMD} -m pip install pyinstaller
 
 echo "Upgrading setup tools"
-pip install --upgrade setuptools
+${PYTHON_CMD} -m pip install --upgrade setuptools

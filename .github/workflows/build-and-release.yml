@@ -1,7 +1,7 @@
 name: Build and Release
 
 on:
-  push:
+  pull_request:
     branches:
       - main
 
@@ -25,14 +25,20 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
           pip install pyinstaller
+        working-directory: src
+
+      - name: Debug File Location
+        run: |
+          dir
+        working-directory: src
 
       - name: Compile Windows Executable
         run: |
-          cd src
-          .\src\compile.bat
+          .\compile.bat
+        working-directory: src
 
       - name: Upload Windows Executable
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: CyberCraft-Windows
           path: src\dist\CyberCraft.exe
@@ -56,15 +62,18 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
           pip install pyinstaller
+        working-directory: src
 
+
+        
       - name: Compile macOS Executable
         run: |
-          cd src
           chmod +x *.sh resource/*.sh
-          ./src/compile.sh
+          ./compile.sh
+        working-directory: src
 
       - name: Upload macOS Executable
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: CyberCraft-macOS
           path: src/dist/CyberCraft

@@ -33,6 +33,7 @@ jobs:
   build-windows:
     name: Build Windows Executable
     runs-on: windows-latest
+    needs: create-release # Ensure this job waits for create-release to finish
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -68,6 +69,7 @@ jobs:
   build-macos:
     name: Build macOS Executable
     runs-on: macos-latest
+    needs: create-release # Ensure this job waits for create-release to finish
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3

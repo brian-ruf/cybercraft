@@ -14,25 +14,26 @@ jobs:
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v') # Only run on tag pushes
     outputs:
-      release_id: ${{ steps.create_release.outputs.result }}
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+      release_id: ${{ steps.create_release.outputs.id }}
     steps:
-      - name: Create Release using GitHub API
+      - name: Create Release
         id: create_release
-        uses: actions/github-script@v6
+        uses: actions/create-release@v1.1.0
         with:
-          script: |
-            const { data } = await github.rest.repos.createRelease({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              tag_name: context.ref.replace('refs/tags/', ''),
-              name: `CyberCraft ${context.ref.replace('refs/tags/', '')}`,
-              draft: false,
-              prerelease: false
-            });
-            console.log(`Created release: ${data.html_url}`);
-            console.log(`Upload URL: ${data.upload_url}`);
-            // Write the release_id to outputs
-            return data.id;
+          tag_name: ${{ github.ref_name }}
+          release_name: CyberCraft ${{ github.ref_name }}
+          body: |
+            ## CyberCraft ${{ github.ref_name }}
+            
+            ### Downloads:
+            - **CyberCraft**: macOS 13+ Application
+            - **CyberCraft.exe**: Windows 10+ Application
+            
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Print Release Info
         run: |

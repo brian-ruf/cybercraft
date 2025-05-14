@@ -215,7 +215,10 @@ jobs:
               
               ### Downloads:
               - **Windows 10+**: [CyberCraft.exe](https://github.com/${context.repo.owner}/${context.repo.repo}/releases/download/${tagName}/CyberCraft.exe)
+              
+              After download, the first-time launch may appear to do nothing for 20-40 seconds. This is normal as the application performs initial setup.
+              On subsequent launches, the application may appear to do nothing for 5-10 secconds.
+              
               `
             });
 
-              # - **macOS 13+ (not tested)**: [CyberCraft](https://github.com/${context.repo.owner}/${context.repo.repo}/releases/download/${tagName}/CyberCraft)

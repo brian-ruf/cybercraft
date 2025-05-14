@@ -114,82 +114,82 @@ jobs:
             
             await uploadAsset();
 
-  build-macos:
-    name: Build macOS Executable
-    runs-on: macos-latest
-    needs: create-release
-    if: startsWith(github.ref, 'refs/tags/v') # Only run on tag pushes
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
+  # build-macos:
+  #   name: Build macOS Executable
+  #   runs-on: macos-latest
+  #   needs: create-release
+  #   if: startsWith(github.ref, 'refs/tags/v') # Only run on tag pushes
+  #   steps:
+  #     - name: Checkout Code
+  #       uses: actions/checkout@v3
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.12'
+  #     - name: Set up Python
+  #       uses: actions/setup-python@v4
+  #       with:
+  #         python-version: '3.12'
 
-      - name: Install Dependencies
-        run: |
-          python3 -m venv venv
-          source venv/bin/activate
-          pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pyinstaller
-        working-directory: src
+  #     - name: Install Dependencies
+  #       run: |
+  #         python3 -m venv venv
+  #         source venv/bin/activate
+  #         pip install --upgrade pip
+  #         pip install -r requirements.txt
+  #         pip install pyinstaller
+  #       working-directory: src
 
-      - name: Compile macOS Executable
-        run: |
-          chmod +x *.sh resource/*.sh
-          ./compile.sh
-        working-directory: src
+  #     - name: Compile macOS Executable
+  #       run: |
+  #         chmod +x *.sh resource/*.sh
+  #         ./compile.sh
+  #       working-directory: src
 
-      - name: Upload macOS Release Asset
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const fs = require('fs');
-            const { repo } = context.repo;
-            const release_id = '${{ needs.create-release.outputs.release_id }}';
+  #     - name: Upload macOS Release Asset
+  #       uses: actions/github-script@v6
+  #       with:
+  #         script: |
+  #           const fs = require('fs');
+  #           const { repo } = context.repo;
+  #           const release_id = '${{ needs.create-release.outputs.release_id }}';
             
-            console.log(`Release ID: ${release_id}`);
+  #           console.log(`Release ID: ${release_id}`);
             
-            const uploadAsset = async () => {
-              const filename = 'CyberCraft';
-              const contentType = 'application/octet-stream';
-              const filePath = 'src/dist/CyberCraft';
+  #           const uploadAsset = async () => {
+  #             const filename = 'CyberCraft';
+  #             const contentType = 'application/octet-stream';
+  #             const filePath = 'src/dist/CyberCraft';
             
-              try {
-                // Check if file exists
-                if (!fs.existsSync(filePath)) {
-                  throw new Error(`File not found: ${filePath}`);
-                }
+  #             try {
+  #               // Check if file exists
+  #               if (!fs.existsSync(filePath)) {
+  #                 throw new Error(`File not found: ${filePath}`);
+  #               }
                 
-                const fileSize = fs.statSync(filePath).size;
-                console.log(`Uploading ${filename} (${fileSize} bytes)`);
+  #               const fileSize = fs.statSync(filePath).size;
+  #               console.log(`Uploading ${filename} (${fileSize} bytes)`);
                 
-                const fileData = fs.readFileSync(filePath);
+  #               const fileData = fs.readFileSync(filePath);
                 
-                // Upload the release asset
-                await github.rest.repos.uploadReleaseAsset({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  release_id: release_id,
-                  name: filename,
-                  data: fileData,
-                  headers: {
-                    'content-type': contentType,
-                    'content-length': fileSize
-                  }
-                });
+  #               // Upload the release asset
+  #               await github.rest.repos.uploadReleaseAsset({
+  #                 owner: context.repo.owner,
+  #                 repo: context.repo.repo,
+  #                 release_id: release_id,
+  #                 name: filename,
+  #                 data: fileData,
+  #                 headers: {
+  #                   'content-type': contentType,
+  #                   'content-length': fileSize
+  #                 }
+  #               });
                 
-                console.log(`Successfully uploaded ${filename}`);
-              } catch (error) {
-                console.error(`Error uploading asset: ${error.message}`);
-                core.setFailed(error.message);
-              }
-            };
+  #               console.log(`Successfully uploaded ${filename}`);
+  #             } catch (error) {
+  #               console.error(`Error uploading asset: ${error.message}`);
+  #               core.setFailed(error.message);
+  #             }
+  #           };
             
-            await uploadAsset();
+  #           await uploadAsset();
 
 
   update-release-description:
@@ -213,8 +213,8 @@ jobs:
               body: `## CyberCraft ${tagName}
               
               ### Downloads:
-              - **macOS 13+ (not tested)**: [CyberCraft](https://github.com/${context.repo.owner}/${context.repo.repo}/releases/download/${tagName}/CyberCraft)
               - **Windows 10+**: [CyberCraft.exe](https://github.com/${context.repo.owner}/${context.repo.repo}/releases/download/${tagName}/CyberCraft.exe)
               `
             });
 
+              # - **macOS 13+ (not tested)**: [CyberCraft](https://github.com/${context.repo.owner}/${context.repo.repo}/releases/download/${tagName}/CyberCraft)

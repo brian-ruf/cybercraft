@@ -213,7 +213,8 @@ jobs:
               body: `## CyberCraft ${tagName}
               
               ### Downloads:
-              - **macOS 13+**: [CyberCraft](https://github.com/${context.repo.owner}/${context.repo.repo}/releases/download/${tagName}/CyberCraft)
+              - **macOS 13+ (not tested)**: [CyberCraft](https://github.com/${context.repo.owner}/${context.repo.repo}/releases/download/${tagName}/CyberCraft)
               - **Windows 10+**: [CyberCraft.exe](https://github.com/${context.repo.owner}/${context.repo.repo}/releases/download/${tagName}/CyberCraft.exe)
               `
             });
+

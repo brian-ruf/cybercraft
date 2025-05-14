@@ -46,9 +46,9 @@ Once execution permission is grated, the macOS bash scripts should work for Linu
 
 # Python and PySide6
 
-CyberCraft is developed and tested using Python 3.12.4 and PySide6 6.9.0. 
+CyberCraft is developed and tested using Windows 11, Python 3.12.4 and PySide6 6.9.0. 
 
-Testing on Python 3.13 is planned for Summer 2025.
+On macOS, PySide6 requires Python 3.6 - 3.11 and does not install for 3.12+ as of May 15, 2025.
 
 The current version of PySide6 requires Python 3.7 or later.While CyberCraft may work with Python versions earlier than 3.12, no testing has been conducted, nor is testing of earlier Python versions planned.
 

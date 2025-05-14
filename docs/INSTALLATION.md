@@ -1,15 +1,16 @@
 # Installation and Getting Started
 
 You have three options for using CyberCraft:
-- **Pre-Compiled**: Download a pre-compliled executable for Windows or macOS. (_Planned: Summer 2025_)
+- **Pre-Compiled**: Download a pre-compliled executable for Windows (_Unsigned. Signed coming Summer 2025_) or macOS (_Planned: Summer 2025_).
 - **Complile Yourself**: Complile the Python code to an executable for your Windows or macOS platform.
 - **Native Python**: Run the native Python code on your Windows or macOS platform. 
   - _May work on Linux. Untested._
 
-## Pre-Compiled (Planned: Summer 2025)
-Download a pre-compliled executable for Windows or macOS.
+## Pre-Compiled
 
-_Links will be provided here when available._
+Unsigned Windows available now. Signed Windows and Signed macOS binaries are planned for summer 2025.
+
+Executables are available for download from the [CyberCraft Release Page](https://github.com/ruf-risk/releases) on GitHub. 
 
 Pre-compiled CyberCraft is designed to run as a stand-alone executable. 
 - There is no installer. 

@@ -3,9 +3,8 @@
 # https://coderslegacy.com/pyinstaller-virtual-environment-with-venv/
 
 clear
-echo "Tested using Python 3.12 on macOS"
+
 echo "Activating virtual environment"
-source venv/bin/activate
 
 if [ -d "venv" ]; then
     echo "Virtual environment found."
@@ -13,6 +12,8 @@ else
     echo "Virtual environment not found. Installing ..."
     bash install_venv.sh
 fi
+
+source venv/bin/activate
 
 # Resource compilation
 cd resource

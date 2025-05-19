@@ -203,6 +203,7 @@ def chkdir(path, make_if_not_present = False) -> bool:
     # print ("Status: " + out.iif(status, "TRUE", "FALSE"))
     return status
 
+
 # -----------------------------------------------------------------------------
 def mkdir(path) -> bool:
     """

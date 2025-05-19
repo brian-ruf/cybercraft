@@ -1,10 +1,9 @@
 from loguru import logger
 from jinja2 import Template, BaseLoader, TemplateNotFound, Environment
 import asyncio
-
+from common.ps6_common import *
 from oscal_project_class import *
-
-
+# -----------------------------------------------------------------------------
 TAB_TITLE = "Project"
 TEMPLATE = "primary.html"
 PAGE_TITLE = "<h1>New Project</h1>"
@@ -87,7 +86,7 @@ async def handler(backend, command):
                     match (command["id"]):
                         case "button-id":
                             logger.info(f"{command["id"]} button clicked")
-                            backend.spinner(on=True)  # Show processing indicator
+                            # backend.spinner(on=True)  # Show processing indicator
                             try:
                                 # Call process_update directly
                                 await process_update(backend, "command")
@@ -100,6 +99,9 @@ async def handler(backend, command):
                         case "open":
                             logger.info("Open button clicked")
                             await process_update(backend, "open")
+                        case "import":
+                            logger.info("Import button clicked")
+                            await process_update(backend, "import")
 
                         case _:
                             logger.debug(f"Ignoring button {command['id']}")
@@ -121,9 +123,20 @@ async def process_update(backend, command):
 
     try:
         match command:
-            case "command":
-                logger.debug("Get Started command")
+            case "import":
+                logger.debug("Open an OSCAL file for import into the project.")
                 # backend.render_page("concept_page.html")
+                oscal_file = backend.open_file_dialog(
+                    start_path=backend.project_file,
+                    file_filter="OSCAL Files (*.xml *.json *.yaml);; All Files (*.*)"
+                )
+                if oscal_file:
+                    logger.debug(f"File selected: {oscal_file}")
+                    backend.project.import_file(oscal_file)
+                    backend.status_update("File imported successfully.", "success")
+                else:
+                    logger.debug("No file selected.")
+                    backend.status_update("No file selected.", "warning")
             case _:
                 logger.debug(f"Unknown command: {command}")
 

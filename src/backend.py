@@ -1,17 +1,17 @@
 # support_gui.py
-import sys
-import os
+# import sys
+# import os
 from loguru import logger
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWebChannel import QWebChannel
 from PySide6.QtCore import QObject, Slot, Signal, QFile, QIODevice, QUrl
 from PySide6.QtWebEngineCore import (
     QWebEngineUrlSchemeHandler, 
-    QWebEngineUrlScheme,
     QWebEngineUrlRequestJob,
-    QWebEngineProfile, 
-    QWebEngineSettings,
-    QWebEnginePage
+    QWebEngineSettings
+    # QWebEngineUrlScheme,
+    # QWebEngineProfile, 
+    # QWebEnginePage
 )
 from PySide6 import QtCore
 import qasync

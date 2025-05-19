@@ -370,13 +370,23 @@ class Database:
         Returns: The file content if successful. None otherwise.
         """
         content_dict = {}
+        ret_value = ""
         logger.debug(f"Retrieving file using uuid='{uuid}'" )
 
         if self.type == "sqlite3":
-            content_dict = type_sqlite3.retrieve_blob_from_db(self.conn, uuid)
+            content_dict = await type_sqlite3.retrieve_blob_from_db(self.conn, uuid)
+            if content_dict:
+                logger.debug(f"Retrieved file with uuid='{uuid}'")
+                if "content" in content_dict:
+                    logger.debug("Found content in the filecache")
+                    ret_value = content_dict["content"]
+                # for key in content_dict:
+                #     logger.debug(f"Key: {key}")
+                    # logger.debug(f"Key: {key} Value: {content_dict[key]}")
+            else:
+                logger.debug(f"File with uuid='{uuid}' not found in the database.")
 
-
-        return content_dict
+        return ret_value
     # -------------------------------------------------------------------------
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

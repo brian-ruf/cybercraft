@@ -392,7 +392,7 @@ async def store_blob_to_db(conn, identifier: str, blob, attributes: dict) -> boo
         conn.rollback()
         raise e
 
-def retrieve_blob_from_db(conn, identifier: str) -> Any:
+async def retrieve_blob_from_db(conn, identifier: str) -> Any:
     """
     Retrieve a binary large object (BLOB) from the database.
     
@@ -406,6 +406,7 @@ def retrieve_blob_from_db(conn, identifier: str) -> Any:
         The BLOB data, or None if not found
     """
     cursor = conn.cursor()
+    return_dict = {}
     
     try:
         cursor.execute(f'''SELECT * 
@@ -413,22 +414,27 @@ def retrieve_blob_from_db(conn, identifier: str) -> Any:
                          WHERE uuid = ?''', (identifier,))
         
         result = cursor.fetchone()
+        # logger.debug(f"Result '{result}'")
         
         if result is not None:
             # Unpack the result
             return_dict = {
-            "uuid": result["uuid"],
-            "content": result["content"],
-            "datatype": result["datatype"],
-            "acquired": result["acquired"],
-            "filename": result["filename"],
-            "original_location": result["original_location"],
-            "file_type": result["file_type"],
-            "mime_type": result["mime_type"]
+            "uuid": result[0],
+            "filename": result[1],
+            "original_location": result[2],
+            "mime_type": result[3],
+            "file_type": result[4],
+            "acquired": result[5],
+            "datatype": result[6],
+            "compressed": result[7],
+            "content": result[8]
             }
+            # logger.debug(f"Retrieved BLOB data for identifier '{identifier}'")
             
-            if result["compressed"] == 1:
+            if return_dict["compressed"] == 1:
                 return_dict["content"] = zlib.decompress(return_dict["content"])
+            else:
+                return_dict["content"] = return_dict["content"]
 
             if return_dict["datatype"] == 'bytes':
                 return_dict["content"] = bytes(return_dict["content"])
@@ -446,7 +452,6 @@ def retrieve_blob_from_db(conn, identifier: str) -> Any:
                 raise ValueError(f"Unexpected data type: {return_dict["datatype"]}")
         else :
             raise ValueError(f"No record found with UUID: {identifier}")
-            return_dict = {}
 
         return return_dict
             

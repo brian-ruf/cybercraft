@@ -81,23 +81,33 @@ class OSCAL_support:
         self.backend    = None      # If working within an application, this is the backend object
 
         self.db = database.Database(self.db_type, self.db_conn)
-        if self.db is not None:
-            asyncio.create_task(self.async_init())
-        else:
-            logger.error("Unable to create support database object.")
-            self.ready = False
+        logger.debug("Support: __init__")
+        # if self.db is not None:
+        #     asyncio.create_task(self.async_init())
+        # else:
+        #     logger.error("Unable to create support database object.")
+        #     self.ready = False
     # -------------------------------------------------------------------------
     async def async_init(self):
+        logger.debug("Support: async_init")
         self.ready = await self.startup()
     # -------------------------------------------------------------------------
     @classmethod
     async def create(cls, db_conn, db_type="sqlite3"):
         """Async factory method to create and initialize OSCAL_support"""
+        logger.debug("Support: create")
         self = cls(db_conn, db_type)
+        # if self.db is not None:
+        #     self.ready = await self.startup()
         if self.db is not None:
-            self.ready = await self.startup()
+            await self.async_init()
+        else:
+            logger.error("Unable to create support database object.")
+            self.ready = False
+
         return self
     # -------------------------------------------------------------------------
+
     async def startup(self, check_for_updates=False, refresh_all=False):
         """
         Perform startup tasks required to provide OSCAL support.
@@ -116,8 +126,10 @@ class OSCAL_support:
            - If update succeeds, set state to "populated"
         3 If state is "populated" set self.ready to True
         """
+        logger.debug("Support: startup")
         status = False
-        if self.db_state == "unknown": 
+
+        if not self.db_state or self.db_state == "unknown": 
             # status = await self.__check_for_tables()
             status = await self.db.check_for_tables(OSCAL_SUPPORT_TABLES)
 
@@ -146,20 +158,6 @@ class OSCAL_support:
        
         return status
     # -------------------------------------------------------------------------
-    # async def __check_for_tables(self):
-    #     """
-    #     Check for the presence of the OSCAL support tables in the database.
-    #     """
-    #     status = True
-    #     for key in OSCAL_SUPPORT_TABLES:
-    #         if self.db.table_exists(key):
-    #             status = status and True
-    #         else:
-    #             self.__status_messages(f"Creating Table: {key}")
-    #             table_exists = await self.db.create_table(OSCAL_SUPPORT_TABLES[key])
-    #             status = status and table_exists
-
-    #     return status
     # -------------------------------------------------------------------------
     async def __load_versions(self):     
         """
@@ -183,7 +181,25 @@ class OSCAL_support:
             status = True
 
         return status
+    # -------------------------------------------------------------------------
+    async def enumerate_models(self, version):
+        """
+        Enumerate the supported models for a given OSCAL version.
+        """
+        models = []
 
+        status = False
+        
+        if version in self.versions:
+            query = f"SELECT DISTINCT model FROM oscal_support WHERE version = '{version}' and type = 'xml-schema'"
+            results = await self.db.query(query)
+            if results is not None:
+                # logger.debug(f"Found {len(results)} models for version {version}.")
+                # logger.debug(f"Models: {results}")
+                for entry in results:
+                    models.append(entry.get("model", ""))
+
+        return models
     # -------------------------------------------------------------------------
     async def __get_oscal_versions(self, fetch="latest"):
         """Pulls OSCAL version information and support files from GitHub and loads it into the database."""
@@ -430,6 +446,34 @@ class OSCAL_support:
         return status
 
 
+    # -------------------------------------------------------------------------
+    async def asset(self, oscal_version, model_name, asset_type):
+        """
+        Returns the asset for the specified OSCAL version and model name.
+        """
+        status = False
+        filecache_uuid = None
+        asset = None
+
+        if oscal_version in self.versions:
+            query = f"SELECT filecache_uuid FROM oscal_support WHERE version = '{oscal_version}' and model = '{model_name}' and type = '{asset_type}'"
+            results = await self.db.query(query)
+            if results is not None:
+                filecache_uuid = results[0].get("filecache_uuid", None)
+                # logger.debug(f"Found filecache UUID {filecache_uuid} for {oscal_version} and {model_name}.")
+                logger.debug(f"Found filecache UUID {filecache_uuid} for {oscal_version} and {model_name}.")
+                # Check if the filecache UUID is valid
+                if filecache_uuid:
+                    # Get the asset from the filecache
+                    asset = misc.normalize_content(await self.db.retrieve_file(filecache_uuid))
+                else:
+                    logger.error(f"Unable to find asset for {oscal_version} and {model_name}.")
+            else:
+                logger.error(f"Unable to find asset for {oscal_version} and {model_name}.")
+        else:
+            logger.error(f"OSCAL version {oscal_version} is not supported.")
+
+        return asset
     # -------------------------------------------------------------------------
     def supported(self, oscal_version, assets):
         """

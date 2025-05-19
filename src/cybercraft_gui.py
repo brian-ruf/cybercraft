@@ -172,9 +172,6 @@ class MainWindow(QMainWindow):
             
             self.show_new_tab("project", project_file=file[0], action="open")
 
-            # TODO: Open file in new tab
-            # self.OSCAL_file
-
     # ---------------------------------------------------
     def _new_project(self):
         """Opens a Save File dialog for creating a new OSCAL project file."""

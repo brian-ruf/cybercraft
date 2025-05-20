@@ -15,7 +15,7 @@ Please see each of the following sections for more information:
 
 ## Requirements Summary
 
-CyberCraft is designed to run on Windows 10+ and macOS 13+ using Python 3.12+. 
+CyberCraft is designed to run on Windows 10+ and macOS 13+ using Python 3.12+. At this time, it has only been tested on Windows.
 
 CyberCraft may run on Linux and Android without much modification and these are target platforms for Q4 2025.
 

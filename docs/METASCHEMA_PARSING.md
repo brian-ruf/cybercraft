@@ -14,11 +14,16 @@ metaschema = "model-name" : [{"name": element_name,     @name
                     "min-occurs": [ "0" | "1" ],
                     "max-occurs": [ "1" | "unbounded" ],
                     "value-type": "OSCAL_value_type",
+                    "in-xml" : [ "WRAPPED" | "UNWRAPPED" | "WITH_WRAPPER" ],
+                    "in-json" : [ in group-as: ],
+                    "group-as" : "name",
+                    "group-as-in-json" : ["ARRAY" | "SINGLETON_OR_ARRAY" | "BY_KEY"],
+                    "group-as-in-xml" : ["GROUPED", "UNGROUPED"],
                     "json-array-name": "json_key",
                     "json-value-key": "string"
                     "json-value-key-flag": "string"
                     "json-collapsaible" : [ True | False]
-                    "attributes": [ { repeat_this_dict }, {} ], (required: min-occurs=1, max-occurs=1, not-required: min-occurs=0, max-occurs=1)
+                    "flags": [ { repeat_this_dict }, {} ], (if required: min-occurs=1, max-occurs=1, if not-required: min-occurs=0, max-occurs=1)
                     "children": [ { repeat this dict }, {} ],
                     "allowed_values": [ {"value": "value2", "text": "string"}, {} ],
                     "rules": ["rule_id", "rule_id", "rule_id"],  (if the rule context matches this path location)

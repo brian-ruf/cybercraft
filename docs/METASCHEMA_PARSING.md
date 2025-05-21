@@ -2,19 +2,22 @@
 
 ## Metaschema Structure
 ```json
-metaschema = "model-name" : [{"name": element_name,
-                    "type": [ "assembly" | "field" | "flag" ],
+metaschema = "model-name" : [{"name": element_name,     @name
+                    "root" : [ True | False ]   # True if root element.
+                    "structure-type": [ "assembly" | "field" | "flag" ],
                     "path": "/model_name/x/y/z",
-                    "source": "name-of-metaschema-file",
-                    "scope": ["global" | "local"], (default: global)
+                    "source": "name-of-metaschema-file", # 
+                    "scope": ["global" | "local"], (default: global) @scope
                     "formal-name": "formal_name",
                     "description": "description",
-                    "datatype": "string",
+                    "datatype": "string",   @as-type or via constraint
                     "min-occurs": [ "0" | "1" ],
                     "max-occurs": [ "1" | "unbounded" ],
                     "value-type": "OSCAL_value_type",
-                    "json-array-name": "json_array_name",
+                    "json-array-name": "json_key",
                     "json-value-key": "string"
+                    "json-value-key-flag": "string"
+                    "json-collapsaible" : [ True | False]
                     "attributes": [ { repeat_this_dict }, {} ], (required: min-occurs=1, max-occurs=1, not-required: min-occurs=0, max-occurs=1)
                     "children": [ { repeat this dict }, {} ],
                     "allowed_values": [ {"value": "value2", "text": "string"}, {} ],
@@ -23,7 +26,7 @@ metaschema = "model-name" : [{"name": element_name,
                     "remarks": "string",
                     "rules": [ {rule-object-see-below} ],
                     "rule-references": ["rule_id", "rule_id", "rule_id"], (for rules that apply in more than one place)
-                    "value" : _as_appropriate_for_this_context_,
+                    "example" : "string",
                     }]
 ```
 
@@ -45,9 +48,10 @@ value-type: identifier, identifier-reference
                 "description": "description",
                 "rule-type": ["let", "allowed-values", "expect", "has-cardinality", "index", "index-has-key", "is-unique", "matches"], (array: one or more)
                 "data-type": "string",
+                "default" : "string, # a default value for the flag or field
                 "pattern": "string", (regex pattern)
                 "allowed-values": [ {"value": "value2", "text": "string"}, {} ],
-                "allow-others": True,
+                "allow-others": [ True | False ],
                 "extensible": ["none", "model", "external"],  (default: model)
                 "test": "metapath-string",
                 "index-key": {"target": "string", "pattern": "string", "remarks": "string"}, (target is xapth, pattern is a regex pattern)

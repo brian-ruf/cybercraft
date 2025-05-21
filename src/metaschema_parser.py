@@ -14,6 +14,16 @@ from xml.dom import minidom
 from common import *
 import copy
 
+"""Metaschema Parser for OSCAL
+This module provides functionality to parse and process OSCAL metaschema XML files.
+
+While there is some defensive coding, this module assumes metaschema files are valid.
+
+It is not intended to validate metaschema structure or content.
+It will ignore unexpected structures.
+It will issue a WARNING message if it encounteres expected, but unhandled structures. 
+
+"""
 OSCAL_DEFAULT_NAMESPACE = "http://csrc.nist.gov/ns/oscal/1.0"
 METASCHEMA_DEFAULT_NAMESPACE = "http://csrc.nist.gov/ns/oscal/metaschema/1.0"
 METASCHEMA_TOP_IGNNORE = ["schema-name", "schema-version", "short-name", "namespace", "json-base-uri", "remarks", "import"]
@@ -24,6 +34,27 @@ CONSTRAINT_TOP_IGNORE = []
 CONSTRAINT_TOP_KEEP = ["context"]
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# -------------------------------------------------------------------------
+from packaging.version import parse as parse_version
+
+def compare_semver(version1, version2):
+    """
+    Compare two semantic versions and return:
+    -1 if version1 < version2
+     0 if version1 == version2
+     1 if version1 > version2
+    """
+    v1 = parse_version(version1)
+    v2 = parse_version(version2)
+    
+    if v1 < v2:
+        return -1
+    elif v1 > v2:
+        return 1
+    else:
+        return 0
+# -------------------------------------------------------------------------
 def xpath(tree, nsmap, xExpr, context=None):
     """
     Performs an xpath query either on the entire XML document 
@@ -38,18 +69,71 @@ def xpath(tree, nsmap, xExpr, context=None):
 
     Returns: 
     - None if there is an error or if nothing is found.
-    - 
+    - A single element if exactly one is found
+    - A list of elements if multiple are found
     """
-    
-    ret_value=None
-    if context is None:
-        logger.debug("XPath [1]: " + xExpr)
-        ret_value = elementpath.select(tree, xExpr, namespaces=nsmap)
-    else:
-        logger.debug("XPath [1] (" + context.tag + "): " + xExpr)
-        ret_value = elementpath.select(context, xExpr, namespaces=nsmap)
-    logger.debug(str(type(ret_value)))
-    return ret_value
+    ret_value = None
+    try:
+        if context is None:
+            logger.debug("XPath [1]: " + xExpr)
+            result = elementpath.select(tree, xExpr, namespaces=nsmap)
+        else:
+            logger.debug("XPath [1] (" + context.tag + "): " + xExpr)
+            result = elementpath.select(context, xExpr, namespaces=nsmap)
+        
+        # Return None for empty results
+        if not result:
+            return None
+        
+        # Return the single element if there's only one result
+        if len(result) == 1:
+            return result[0]
+        
+        # Return the list if there are multiple results
+        return result
+    except SyntaxError as e:
+        logger.error(f"XPath syntax error: {e} in {xExpr}")
+    except IndexError as e:
+        logger.warning(f"XPath result not found: {e}")
+    except Exception as e:
+        logger.error(f"XPath error: {e}")
+        return None
+# -------------------------------------------------------------------------
+def xpath_atomic(tree, nsmap, xExpr, context=None):
+    """
+    Performs an xpath query either on the entire XML document
+    or on a context within the document.
+    Parameters:
+    - tree (ElementTree): The XML tree to process.
+    - xExpr (str): An xpath expression
+    - context (obj)[optional]: Context object.
+    If the context object is present, the xpath expression is run against
+    that context. If absent, the xpath expression is run against the
+    entire document.
+    Returns:
+    - an empty string if there is an error or if nothing is found.
+    - The first result of the xpath expression as a string.
+    """
+    logger.debug("Performing xpath_atomic")
+    ret_value=""
+
+    try:
+        if context is None:
+            logger.debug("XPath [1]: " + xExpr)
+            ret_value = elementpath.select(tree, xExpr, namespaces=nsmap)[0]
+        else:
+            logger.debug("XPath [1] (" + context.tag + "): " + xExpr)
+            ret_value = elementpath.select(context, xExpr, namespaces=nsmap)[0]
+
+    except SyntaxError as e:
+        logger.error(f"XPath syntax error: {e} in {xExpr}")
+    except IndexError as e:
+        logger.warning(f"XPath result not found: {e}")
+    except Exception as e:
+        logger.error(f"Other XPath error: {e}")
+
+    return str(ret_value)
+
 # -------------------------------------------------------------------------
 def extract_significant_nodes(tree, nsmap):
     """
@@ -80,44 +164,58 @@ def extract_significant_nodes(tree, nsmap):
     logger.debug(f"Extracted content: {len(content)} {str(type(content))}")
     return content
 # -------------------------------------------------------------------------
-# async def recurse_imports(tree, nsmap, support, oscal_version, content=""):
-#     """Recursively assemble metaschema import statements."""
-#     logger.debug("Recursing imports")
-#     imports = xpath(tree, nsmap, '/./METASCHEMA/import/@href')
-#     logger.debug(f"Imports: {imports}")
+"""
+async def recurse_imports(tree, nsmap, support, oscal_version, content=""):
+    ""Recursively assemble metaschema import statements.""
+    logger.debug("Recursing imports")
+    imports = xpath(tree, nsmap, '/./METASCHEMA/import/@href')
+    logger.debug(f"Imports: {imports}")
 
-#     for imp_file in imports:
-#         if imp_file:
-#             logger.info(f"Processing import: {imp_file}")
-#             model_name = imp_file
-#             if model_name.startswith("oscal_"):
-#                 model_name = model_name[len("oscal_"):]
-#             if model_name.endswith("_metaschema_RESOLVED.xml"):
-#                 model_name = model_name[:-len("_metaschema_RESOLVED.xml")]
+    for imp_file in imports:
+        if imp_file:
+            logger.info(f"Processing import: {imp_file}")
+            model_name = imp_file
+            if model_name.startswith("oscal_"):
+                model_name = model_name[len("oscal_"):]
+            if model_name.endswith("_metaschema_RESOLVED.xml"):
+                model_name = model_name[:-len("_metaschema_RESOLVED.xml")]
 
-#             logger.debug(f"Model name: {model_name}")
-#             import_content = await support.asset(oscal_version, model_name, "metaschema")
-#             if import_content:
+            logger.debug(f"Model name: {model_name}")
+            import_content = await support.asset(oscal_version, model_name, "metaschema")
+            if import_content:
 
-#                 try:
-#                     temp_tree = deserialize_xml(import_content)
-#                     content += extract_significant_nodes(temp_tree, nsmap)
-#                     content += await recurse_imports(temp_tree, nsmap, support, oscal_version, content)
-#                 except ElementTree.ParseError as e:
-#                     logger.error(f"Invalid inport {imp_file}")
-#                     logger.error(f"Error {e}")
+                try:
+                    temp_tree = deserialize_xml(import_content)
+                    content += extract_significant_nodes(temp_tree, nsmap)
+                    content += await recurse_imports(temp_tree, nsmap, support, oscal_version, content)
+                except ElementTree.ParseError as e:
+                    logger.error(f"Invalid inport {imp_file}")
+                    logger.error(f"Error {e}")
 
-#     logger.debug(f"Recursed content: {len(content)} {str(type(content))}")
-#     return content
+    logger.debug(f"Recursed content: {len(content)} {str(type(content))}")
+    return content
+"""
 # -------------------------------------------------------------------------
 def xml_to_string(element):
-    """Convert an XML element to a string."""
+    """Convert an XML element or list of elements to a string."""
     element_str = ""
     
     try:
-        clean_assembly = copy.deepcopy(element)
-        remove_namespace(clean_assembly)
-        element_str = ElementTree.tostring(clean_assembly, encoding='unicode')
+        # Handle case where element is a list (common with xpath results)
+        if isinstance(element, list):
+            if len(element) > 0:
+                # Take the first element if it's a list
+                clean_assembly = copy.deepcopy(element[0])
+                remove_namespace(clean_assembly)
+                element_str = ElementTree.tostring(clean_assembly, encoding='unicode')
+            else:
+                # Return empty string for empty list
+                return ""
+        else:
+            # Handle single element case
+            clean_assembly = copy.deepcopy(element)
+            remove_namespace(clean_assembly)
+            element_str = ElementTree.tostring(clean_assembly, encoding='unicode')
     except Exception as e:
         logger.error(f"Error converting XML to string: {e}")
 
@@ -227,6 +325,9 @@ class MetaschemaParser:
         import_directives = xpath(self.tree, self.nsmap, '/./METASCHEMA/import/@href')
         logger.debug(f"Imports: {self.imports}")
 
+        if not isinstance(import_directives, list):
+            import_directives = [import_directives]
+
         for imp_file in import_directives:
             if imp_file:
                 logger.info(f"Processing import: {imp_file}")
@@ -254,28 +355,29 @@ class MetaschemaParser:
         logger.debug(f"{self.oscal_model}: {misc.iif(self.top_level, "TOP", "NOT TOP")}")
 
     # -------------------------------------------------------------------------
-    # async def handle_imports(self):
-    #     """Handle import elements in the XML."""
+    """
+    async def handle_imports(self):
+        ""Handle import elements in the XML.""
 
-    #     temp_content = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-    #     temp_content += "<METASCHEMA xmlns=\"http://csrc.nist.gov/ns/oscal/metaschema/1.0\">\n"
-    #     temp_content += extract_significant_nodes(self.tree, self.nsmap)
+        temp_content = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+        temp_content += "<METASCHEMA xmlns=\"http://csrc.nist.gov/ns/oscal/metaschema/1.0\">\n"
+        temp_content += extract_significant_nodes(self.tree, self.nsmap)
         
-    #     temp_content += await recurse_imports(self.tree, self.nsmap, self.support, self.oscal_version)
-    #     temp_content += "</METASCHEMA>"
+        temp_content += await recurse_imports(self.tree, self.nsmap, self.support, self.oscal_version)
+        temp_content += "</METASCHEMA>"
 
-    #     # logger.debug(f"Content (BEFORE): {len(self.content)} {str(type(self.content))}")
-    #     self.content = temp_content
-    #     logger.debug(f"Content (AFTER): {len(self.content)} {str(type(self.content))}")
+        # logger.debug(f"Content (BEFORE): {len(self.content)} {str(type(self.content))}")
+        self.content = temp_content
+        logger.debug(f"Content (AFTER): {len(self.content)} {str(type(self.content))}")
 
-    #     try:
-    #         self.tree = deserialize_xml(self.content) #  ElementTree.fromstring(self.content)
-    #         self.valid_xml = True
+        try:
+            self.tree = deserialize_xml(self.content) #  ElementTree.fromstring(self.content)
+            self.valid_xml = True
 
-    #     except ElementTree.ParseError as e:
-    #         logger.error(f"XML parsing error: {e}")
-    #         self.valid_xml = False        
-
+        except ElementTree.ParseError as e:
+            logger.error(f"XML parsing error: {e}")
+            self.valid_xml = False        
+    """
 
     # -------------------------------------------------------------------------
     def find(self, name, type, allow_local=True):
@@ -385,25 +487,8 @@ class MetaschemaParser:
         - an empty string if there is an error or if nothing is found.
         - The first result of the xpath expression as a string.
         """
-        logger.debug("Performing xpath_atomic")
-        ret_value=""
 
-        try:
-            if context is None:
-                logger.debug("XPath [1]: " + xExpr)
-                ret_value = elementpath.select(self.tree, xExpr, namespaces=self.nsmap)[0]
-            else:
-                logger.debug("XPath [1] (" + context.tag + "): " + xExpr)
-                ret_value = elementpath.select(context, xExpr, namespaces=self.nsmap)[0]
-
-        except SyntaxError as e:
-            logger.error(f"XPath syntax error: {e} in {xExpr}")
-        except IndexError as e:
-            logger.warning(f"XPath result not found: {e}")
-        except Exception as e:
-            logger.error(f"Other XPath error: {e}")
-
-        return str(ret_value)
+        return xpath_atomic(self.tree, self.nsmap, xExpr, context)
 
     # -------------------------------------------------------------------------
     def xpath(self, xExpr, context=None):
@@ -436,7 +521,7 @@ class MetaschemaParser:
         metaschema_tree = {}
 
         try:
-            metaschema_tree = recurse_metaschema(self.tree, self.nsmap, self.oscal_model, "assembly")
+            metaschema_tree = self.recurse_metaschema(self.oscal_model, "assembly")
         except Exception as e:
             logger.error(f"Error building metaschema tree: {e}")
             metaschema_tree = {}
@@ -444,54 +529,162 @@ class MetaschemaParser:
         return metaschema_tree
     # -------------------------------------------------------------------------
  
-def recurse_metaschema(tree, nsmap, oscal_model, structure_type="assembly", ignore_local=False):
-    """
-    Recursively build the metaschema tree.
-    This function processes the XML tree and extracts significant nodes
-    based on the defined rules. It creates a dictionary representation of the
-    metaschema structure, including attributes and child elements.
-    Parameters:
-    - tree (ElementTree): The XML tree to process.
-    - nsmap (dict): A dictionary mapping namespace prefixes to URIs.
-    - oscal_model (str): The OSCAL model name.
-    - ignore_local (bool): Flag to ignore local elements.
-    Returns:
-    - dict: A dictionary representation of the metaschema tree.
+    def recurse_metaschema(self, name, structure_type="assembly", parent="", ignore_local=False):
+        """
+        Recursively build the metaschema tree.
+        This function processes the XML tree and extracts significant nodes
+        based on the defined rules. It creates a dictionary representation of the
+        metaschema structure, including attributes and child elements.
+        Parameters:
+        - tree (ElementTree): The XML tree to process.
+        - nsmap (dict): A dictionary mapping namespace prefixes to URIs.
+        - oscal_model (str): The OSCAL model name.
+        - ignore_local (bool): Flag to ignore local elements.
+        Returns:
+        - dict: A dictionary representation of the metaschema tree.
 
 
-    NOTE: ignore_local should be true when performing this function on an imported
-    metaschema. This is because the imported metaschema may have local elements
-    that are not intended to be exposed to the importing metaschema file. 
-    """
-    logger.debug("Recursing metaschema tree")
-    metaschema_tree = {}
+        NOTE: ignore_local should be true when performing this function on an imported
+        metaschema. This is because the imported metaschema may have local elements
+        that are not intended to be exposed to the importing metaschema file. 
+        """
+        logger.debug("Recursing metaschema tree")
+        metaschema_tree = {}
 
-    # Extract significant nodes
-    child_elements = xpath(tree, nsmap, '/METASCHEMA/*')
-    
-    # Process each child element under METASCHEMA
-    for assembly in child_elements:
-        assembly_tag = assembly.tag.split('}')[-1]  # Remove namespace
-        logger.debug(f"Processing child:: {assembly_tag}")
-        if assembly_tag not in METASCHEMA_TOP_IGNNORE:
-            logger.debug(f"Adding child: {assembly_tag}")
-            metaschema_tree[assembly_tag] = {}
-            metaschema_tree[assembly_tag]["name"] = assembly_tag
-            metaschema_tree[assembly_tag]["attributes"] = {}
-            metaschema_tree[assembly_tag]["children"] = []
-
-            # Process attributes
-            for attr_name, attr_value in assembly.attrib.items():
-                metaschema_tree[assembly_tag]["attributes"][attr_name] = attr_value
-
-            # Process child elements
-            for child in assembly:
-                metaschema_tree[assembly_tag]["children"].append(recurse_metaschema(child, nsmap, oscal_model))
+        # Extract significant nodes
+        result = self.xpath(f"/METASCHEMA/define-{structure_type}[@name='{name}']")
+        if result is None:
+            # Handle the case where nothing was found
+            logger.debug(f"Did not find <define-{structure_type} name='{name}' ... > in {self.oscal_model}")
+            for item in self.imports:
+                logger.debug(f"Looking in {item[0]}")
+                metaschema_tree = item[1].recurse_metaschema(name, structure_type, parent, ignore_local=True)
+                if metaschema_tree:
+                    break
         else:
-            logger.debug(f"Skipping child: {assembly_tag}")
+            if isinstance(result, list):
+                # Duplicate definitions are not allowed in metaschema, so this would only happen if the metaschema was invliad.
+                logger.warning(f"Found multiple {structure_type} objects named '{name}', using the first one")
+                definition_obj = result[0]
+            else:
+                definition_obj = result
+            # A single element was found as expected
+            logger.debug(f"Found: <define-{structure_type} name='{name}' ... >")
+            logger.debug(f"Definition object ({str(type(definition_obj))}): {xml_to_string(definition_obj)}")
 
-    return metaschema_tree
 
+            metaschema_tree["name"] = name
+            metaschema_tree["root"] = misc.iif(parent == "", True, False)
+            metaschema_tree["use-name"] = self.xpath_atomic("./use-name/text()", definition_obj)
+            if metaschema_tree["use-name"] == "":
+                metaschema_tree["use-name"] = name
+            metaschema_tree["structure-type"] = structure_type
+            metaschema_tree["source"] = self.oscal_model
+            metaschema_tree["formal-name"] = self.xpath_atomic("./formal-name/text()", definition_obj)
+            metaschema_tree["description"] = self.xpath_atomic("./description/text()", definition_obj)
+            metaschema_tree["remarks"] = self.xpath_atomic("./remarks/text()", definition_obj)
+            metaschema_tree["example"] = self.xpath_atomic("./example/text()", definition_obj)
+            if structure_type == "assembly" or structure_type == "field":
+                metaschema_tree["path"] = f"{parent}/{metaschema_tree["use-name"]}"
+            elif structure_type == "flag":
+                metaschema_tree["path"] = f"{parent}/@{metaschema_tree["use-name"]}"
+            metaschema_tree["json-key"] = self.xpath_atomic("./json-key/text()", definition_obj)
+            metaschema_tree["json-value-key"] = self.xpath_atomic("./json-value-key/text()", definition_obj)
+            metaschema_tree["json-value-key-flag"] = self.xpath_atomic("./json-value-key-flag/text()", definition_obj)
+
+            if definition_obj.attrib:
+                for attr_name, attr_value in definition_obj.attrib.items():
+                    match attr_name:
+                        case "name":
+                            # Skip the name attribute as it's already used in the metaschema tree
+                            pass
+                        case "as-type":
+                            metaschema_tree["datatype"] = attr_value
+                        case "scope":
+                            metaschema_tree["scope"] = attr_value
+                        case "min-occurs":
+                            metaschema_tree["min-occurs"] = attr_value
+                        case "max-occurs":
+                            metaschema_tree["max-occurs"] = attr_value
+                        case "collapsible":
+                            if attr_value == "yes":
+                                metaschema_tree["json-collapsible"] = True
+                            else:
+                                metaschema_tree["json-collapsible"] = False
+                            logger.debug(f"Collapsible: {metaschema_tree['collapsible']}")
+                        case "deprecated":
+                            if compare_semver(attr_value, self.oscal_version) <= 0:
+                                metaschema_tree["deprecated"] = True
+                            else:
+                                metaschema_tree["sunsetting"] = attr_value
+                        case "default":
+                            if structure_type == "field" or structure_type == "flag":
+                                metaschema_tree["default"] = attr_value
+                            else:
+                                logger.warning(f"Unknown attribute: <define-{structure_type} name='{name}' {attr_name}='{attr_value}'")
+                        case _:
+                            logger.warning(f"Unknown attribute: <define-{structure_type} name='{name}' {attr_name}='{attr_value}'")
+                    # Remove namespace if present
+                    logger.debug(f"Attribute: {attr_name} = {attr_value}")
+                
+            # For any attribute that is not present, set the default defined in the spec
+            if not metaschema_tree.get("datatype") :
+                metaschema_tree["datatype"] = "string"
+            if not metaschema_tree.get("scope"):
+                metaschema_tree["scope"] = "global"
+
+            if metaschema_tree.get("root"):
+                metaschema_tree["min-occurs"] = "1"
+                metaschema_tree["max-occurs"] = "1"
+
+            if not metaschema_tree.get("min-occurs"):
+                metaschema_tree["min-occurs"] = "0"
+            if not metaschema_tree.get("max-occurs"):
+                metaschema_tree["max-occurs"] = "unbounded"
+            if not metaschema_tree.get("json-collapsible"):
+                metaschema_tree["json-collapsible"] = False
+            if not metaschema_tree.get("deprecated"):
+                metaschema_tree["deprecated"] = False
+            if not metaschema_tree.get("default"):
+                metaschema_tree["default"] = None
+                
+
+            # Handle:  <<<<====---- ****
+            # - flags
+            # - define-flags
+            # - model
+            #   - fields
+            #   - define-fields
+            # 
+
+        if not metaschema_tree:
+            logger.error(f"Did not find {structure_type} object: {name}")
+
+        logger.debug(f"Metaschema node: {metaschema_tree}")
+
+        return metaschema_tree
+
+# -------------------------------------------------------------------------
+def get_attribute_value(element, attribute_name, default=""):
+    """
+    Get the value of a specific attribute from an XML element.
+    
+    Args:
+        element: The XML element to check
+        attribute_name: The name of the attribute to look for
+        default: The value to return if the attribute doesn't exist (default: empty string)
+        
+    Returns:
+        The attribute value or the default value if the attribute doesn't exist
+    """
+    # Handle namespace prefixes if needed
+    if '}' in attribute_name:
+        clean_name = attribute_name.split('}', 1)[1]
+    else:
+        clean_name = attribute_name
+        
+    # Get the value with a default of empty string
+    return element.get(clean_name, default)
 # -------------------------------------------------------------------------
 
 async def setup_support(support_file= "./support/support.oscal"):

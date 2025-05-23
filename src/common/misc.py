@@ -13,8 +13,10 @@ import getpass as gt
 from loguru import logger
 from typing import Union, Dict, Any 
 
+"""
+
 # def convert_datetime_format(date_str, include_time=True):
-#     """
+#     ""
 #     Converts various ISO 8601 datetime strings to a formatted date string.
 #     Handles variations including:
 #     - Decimal or whole number seconds
@@ -25,7 +27,7 @@ from typing import Union, Dict, Any
         
 #     Returns:
 #         str: Date formatted as 'Month DD, YYYY'
-#     """
+#     ""
 #     try:
 #         # First try exact format with milliseconds
 #         dt = datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%S.%fZ")
@@ -58,6 +60,7 @@ from typing import Union, Dict, Any
     
 #     # Convert to the desired format
 #     return dt.strftime("%B %d, %Y  %I:%M:%S %p") if include_time else dt.strftime("%B %d, %Y")
+"""
 
 def convert_datetime_format(date_input, include_time=True, assume_localtime=True):
     """

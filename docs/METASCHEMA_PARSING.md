@@ -2,20 +2,21 @@
 
 ## Metaschema Structure
 ```json
-metaschema = "model-name" : [{"name": element_name,     @name
-                    "root" : [ True | False ]   # True if root element.
-                    "structure-type": [ "assembly" | "field" | "flag" ],
-                    "path": "/model_name/x/y/z",
-                    "source": "name-of-metaschema-file", # 
+metaschema = "model-name" : [{"name": defined_name (identifier),     @name
+                    "use-name" : [string] element_name,
+                    "datatype": [string],   @as-type or via constraint
+                    "path": [string: path syntax], # Example: "/model_name/x/y/z",
+                    "min-occurs": [string: "0" | "1" ],
+                    "max-occurs": [string: "1" | "unbounded" ],
+                    "structure-type": [string: "assembly" | "field" | "flag" ],
+                    "formal-name": [string ],
+                    "description": [string ],
+                    "default": [variant],
+                    "sequence" [integer],
+
                     "scope": ["global" | "local"], (default: global) @scope
-                    "formal-name": "formal_name",
-                    "description": "description",
-                    "datatype": "string",   @as-type or via constraint
-                    "min-occurs": [ "0" | "1" ],
-                    "max-occurs": [ "1" | "unbounded" ],
-                    "value-type": "OSCAL_value_type",
-                    "in-xml" : [ "WRAPPED" | "UNWRAPPED" | "WITH_WRAPPER" ],
-                    "in-json" : [ in group-as: ],
+
+                    "in-xml" : [string: "WRAPPED" | "UNWRAPPED" | "WITH_WRAPPER" ],
                     "group-as" : "name",
                     "group-as-in-json" : ["ARRAY" | "SINGLETON_OR_ARRAY" | "BY_KEY"],
                     "group-as-in-xml" : ["GROUPED", "UNGROUPED"],

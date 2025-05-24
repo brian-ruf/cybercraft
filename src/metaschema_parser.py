@@ -35,6 +35,8 @@ It will issue a WARNING message if it encounteres expected, but unhandled struct
 
 """
 SUPPRESS_XPATH_NOT_FOUND_WARNINGS = True
+RUNAWAY_LIMIT = 400
+DEBUG_OBJECT = "system-component"
 
 OSCAL_DEFAULT_NAMESPACE = "http://csrc.nist.gov/ns/oscal/1.0"
 METASCHEMA_DEFAULT_NAMESPACE = "http://csrc.nist.gov/ns/oscal/metaschema/1.0"
@@ -655,13 +657,13 @@ def deserialize_xml(xml_string):
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 class MetaschemaParser:
-    def __init__(self, metaschema, support, import_inventory=[]):
+    def __init__(self, metaschema, support, import_inventory=[], oscal_version=""):
         logger.debug(f"Initializing MetaschemaParser")
         self.content = metaschema
         self.valid_xml = False
         self.top_level = False
         self.xml_namespace = ""
-        self.oscal_version = ""
+        self.oscal_version = oscal_version
         self.oscal_model = ""
         self.schema_name = ""
         self.tree = None
@@ -670,10 +672,10 @@ class MetaschemaParser:
         self.imports = {} # list of imports {"metaschema_file_name.xml": MetaschemaParser_Object, ...}
         self.import_inventory = import_inventory
     @classmethod
-    async def create(cls, metaschema, support, import_inventory=[]):
+    async def create(cls, metaschema, support, import_inventory=[], oscal_version=""):
         logger.debug(f"Creating MetaschemaParser")
         ret_value = None
-        ret_value = cls(metaschema, support)
+        ret_value = cls(metaschema, support, import_inventory, oscal_version)
         return ret_value
     # -------------------------------------------------------------------------
     def __str__(self):
@@ -708,7 +710,9 @@ class MetaschemaParser:
                 if not self.oscal_model:
                     self.oscal_model = "unnamed-imported-metaschema"
             self.schema_name = self.xpath_atomic("/METASCHEMA/schema-name/text()")
-            self.oscal_version = f"v{self.xpath_atomic("/METASCHEMA/schema-version/text()")}"
+            if self.oscal_version == "":
+                self.oscal_version = f"v{self.xpath_atomic("/METASCHEMA/schema-version/text()")}"
+                logger.info(f"DEBUG: Setting version to {self.oscal_version} for {self.oscal_model}")
 
             await self.setup_imports()
             # await self.handle_imports()
@@ -719,21 +723,23 @@ class MetaschemaParser:
     # -------------------------------------------------------------------------
     async def setup_imports(self):
         """Identify import elements and set them up as import objects."""
-        logger.debug("Setting up imports")
+        logger.debug(f"Setting up imports for {self.oscal_model}")
         import_directives = xpath(self.tree, self.nsmap, '/./METASCHEMA/import/@href')
         logger.debug(f"Imports: {self.imports}")
 
         if import_directives is not None:
             if not isinstance(import_directives, list):
+                logger.debug(f"Import directives is not None and not a list: {import_directives}")
                 import_directives = [import_directives]
 
             for imp_file in import_directives:
+                logger.debug(f"Import file: {imp_file}")
                 if imp_file:
-                    logger.info(f"Processing import: {imp_file}")
-                    if imp_file in self.import_inventory:
-                        logger.debug(f"Import {imp_file} already processed.")
+                    # logger.info(f"Processing import: {imp_file}")
+                    if False: # imp_file in self.import_inventory:
+                        logger.info(f"Import {imp_file} already processed.")
                     else:
-                        # logger.debug(f"Import {imp_file} not processed. Continuing ...")
+                        logger.debug(f"Processing {imp_file}  ...")
                         self.import_inventory.append(imp_file)
                         model_name = imp_file
                         if model_name.startswith("oscal_"):
@@ -744,16 +750,18 @@ class MetaschemaParser:
                         logger.debug(f"Model name: {model_name}")
                         import_content = await self.support.asset(self.oscal_version, model_name, "metaschema")
                         if import_content:
-                            import_obj = await MetaschemaParser.create(import_content, self.support, self.import_inventory)
+                            logger.debug(f"Version: {self.oscal_version} Model: {model_name} Content length: {len(import_content)}")
+                            import_obj = await MetaschemaParser.create(import_content, self.support, self.import_inventory, self.oscal_version)
                             status = await import_obj.top_pass()
+                            logger.debug(f"Import status: {status}")
                             if status:
                                 self.imports[model_name] = import_obj
                                 # self.imports.append({imp_file: import_obj})
                                 logger.debug(f"Imports[0] for {imp_file}: {misc.iif(import_obj.top_level, "TOP", "NOT TOP")}")
                             else:
                                 logger.error(f"Invalid Import file: {imp_file}")
-        # logger.debug(f"IMPORTS FOR {self.oscal_model}: {self.imports}")
-        # logger.debug(f"IMPORTS FOR {self.oscal_model}: {self.import_inventory}")
+        # logger.info(f"IMPORTS FOR {self.oscal_model}: {self.imports}")
+        # logger.info(f"IMPORTS FOR {self.oscal_model}: {self.import_inventory}")
 
     # -------------------------------------------------------------------------
     """
@@ -965,7 +973,8 @@ class MetaschemaParser:
         """
         global global_counter, global_unhandled_report, global_stop_here
         global_counter += 1
-        if global_counter > 10000:
+        print(".", end="")
+        if global_counter > RUNAWAY_LIMIT:
             logger.error(f"Recursion limit reached. Exiting.")
             sys.exit(1)
             return None
@@ -981,12 +990,14 @@ class MetaschemaParser:
             logger.debug(f"{GREEN}Working on {structure_type}: {parent}/{name}{RESET} in {self.oscal_model} (imported)")
         logger.debug(f"{GREEN}===================================================================={RESET}")
 
-        if name == "import-ssp":
+        if name == DEBUG_OBJECT:
             logger.info(f"DEBUG: working on {structure_type}: {parent}/{name} in {self.oscal_model}")
         # Check if this module was already searched
         if self.oscal_model in already_searched:
             logger.debug(f"Already searched {self.oscal_model}. Search List: {already_searched}. For {structure_type} {name}")
             return None
+        else:
+            already_searched.append(self.oscal_model)
 
 
         # Create the metaschema tree (etablishes consistent sequence for keys that should always be present)
@@ -1005,7 +1016,7 @@ class MetaschemaParser:
 
         if structure_type in ["field", "flag", "assembly"]:
             logger.debug(f"Recursing metaschema tree for {structure_type} {name}")
-            metaschema_tree = self.recurse_metaschema(name, f"define-{structure_type}", parent=parent, already_searched=[]) 
+            metaschema_tree = self.recurse_metaschema(name, f"define-{structure_type}", parent=parent, already_searched=[], context=None) 
             logger.debug(f"{GREEN}Returning from 'define-{structure_type}' for {name}{RESET}")
 
         # Setup xpath query
@@ -1013,6 +1024,8 @@ class MetaschemaParser:
         no_local = misc.iif(ignore_local, " and not(@scope='local')", "")
         xpath_query += f"[@{misc.iif(structure_type in ["field", "flag", "assembly"], "ref", "name")}='{name}'{no_local}]"
 
+        if DEBUG_OBJECT == name:
+            logger.info(f"DEBUG: Looking for {structure_type}: {name} in {self.oscal_model} with xpath: {xpath_query}")
         result = self.xpath(xpath_query, context)
     
         if result is None:
@@ -1020,43 +1033,26 @@ class MetaschemaParser:
             logger.debug(f"Did not find <{structure_type}: '{name}' ... > in {self.oscal_model}")
 
             # cycle through each of the imported metaschema files
-            if name == "import-ssp":
+            if name == DEBUG_OBJECT:
                 logger.info(f"DEBUG: Looking in imports: {self.imports}")
-            # for item in self.imports:
-            #     import_file = item
-            #     parser_object = self.imports[import_file]
-                
-            #     if name == "import-ssp":
-            #         logger.info(f"DEBUG: Looking in {import_file} for {structure_type}: {name}")
-            
-            #     # This will recursively search down the stack of imports. 
-            #     # If all metaschema files are valid, the definition SHOULD be found.
-            #     # There are some circular imports, so we need a way to break the cycle in case the definition is not found.
-            #     already_searched.append(self.oscal_model)
-            #     metaschema_tree = parser_object.recurse_metaschema(name, structure_type, parent=parent, ignore_local=True, already_searched=already_searched)
-            #     if name == "import-ssp":
-            #         logger.info(f"DEBUG: Metaschema_tree {str(type(metaschema_tree))}")
 
-            #     if metaschema_tree is not None:
-            #         break
             for item in self.imports:
                 import_file = item
                 parser_object = self.imports[import_file]
                 
-                if name == "import-ssp":
+                if name == DEBUG_OBJECT:
                     logger.info(f"DEBUG: Looking in {import_file} for {structure_type}: {name}")
 
                 # This will recursively search down the stack of imports. 
                 # If all metaschema files are valid, the definition SHOULD be found.
                 # There are some circular imports, so we need a way to break the cycle in case the definition is not found.
-                already_searched.append(self.oscal_model)
                 metaschema_tree = parser_object.recurse_metaschema(name, structure_type, parent=parent, ignore_local=True, already_searched=already_searched)
-                if name == "import-ssp":
+                if name == DEBUG_OBJECT:
                     logger.info(f"DEBUG: Metaschema_tree {str(type(metaschema_tree))}")
 
                 # Check if we got a meaningful result, not just an empty dict or None
                 if metaschema_tree is not None and metaschema_tree.get("structure-type")!= "":
-                    if name == "import-ssp":
+                    if name == DEBUG_OBJECT:
                         logger.info(f"DEBUG: FOUND in {import_file}: {structure_type}: {name}")
 
                     break
@@ -1064,10 +1060,8 @@ class MetaschemaParser:
                     # Reset metaschema_tree to None so we continue searching
                     metaschema_tree = None
 
-
-
             if metaschema_tree is None and not ignore_local: # ignore_local is only false at the top level
-                logger.error(f"Did not find {structure_type}: {name} in {self.oscal_model} nor any imports.")
+                logger.error(f"Did not find {structure_type}: {name} in {self.oscal_model} nor any imports. Parent: {parent}")
 
         else:
             if isinstance(result, list):
@@ -1089,10 +1083,6 @@ class MetaschemaParser:
                 metaschema_tree["path"] = f"{parent}/@{metaschema_tree["use-name"]}"
             metaschema_tree["structure-type"] = structure_type.replace("define-", "")
 
-            # metaschema_tree["formal-name"]         = self.xpath_atomic("./formal-name/text()", definition_obj) or metaschema_tree.get("formal-name", "")
-            # metaschema_tree["description"]         = self.get_markup_content("./description", definition_obj) or metaschema_tree.get("description", "")
-            # metaschema_tree["remarks"]             = self.get_markup_content("./remarks", definition_obj) or metaschema_tree.get("remarks", "")
-            # metaschema_tree["example"]             = self.get_markup_content("./example", definition_obj) or metaschema_tree.get("example", "")
             temp_value = self.xpath_atomic("./formal-name/text()", definition_obj)
             if temp_value:
                 metaschema_tree["formal-name"] = temp_value
@@ -1235,7 +1225,6 @@ class MetaschemaParser:
             
             logger.debug(f"After Flags/metaschema_tree: {misc.iif(metaschema_tree is None, "None", "Has Content")}")    
 
-
             # TODO: Handle constraints <<<<====---- ****
             # TODO: Handle constraints <<<<====---- ****
             # TODO: Handle constraints <<<<====---- ****
@@ -1252,12 +1241,10 @@ class MetaschemaParser:
             else:
                 logger.debug(f"No model found within {structure_type} {name}")
 
-
             logger.debug(f"After Assemblies/metaschema_tree: {misc.iif(metaschema_tree is None, "None", "Has Content")}")   
 
-
         if metaschema_tree is None:
-            logger.error(f"Did not find {structure_type} object: {name}")
+            logger.error(f"Did not find {structure_type} / {name} in {self.oscal_model} or any imports.")
         # else:
         #     # FOR DEBUG ONLY
         #     global_keep_going = not (name == "property")
@@ -1434,5 +1421,5 @@ if __name__ == "__main__":
         logger.info(f"Application exited with code: {exit_code}")
         sys.exit(exit_code)
     except Exception as e:
-        logger.error(f"Fatal error: {e}")
+        logger.exception(f"Fatal error: {e}")
         sys.exit(1)

@@ -2,38 +2,42 @@
 
 ## Metaschema Structure
 ```json
-metaschema = "model-name" : [{"name": defined_name (identifier),     @name
-                    "use-name" : [string] element_name,
-                    "datatype": [string],   @as-type or via constraint
-                    "path": [string: path syntax], # Example: "/model_name/x/y/z",
-                    "min-occurs": [string: "0" | "1" ],
-                    "max-occurs": [string: "1" | "unbounded" ],
-                    "structure-type": [string: "assembly" | "field" | "flag" ],
-                    "formal-name": [string ],
-                    "description": [string ],
-                    "default": [variant],
-                    "sequence" [integer],
+metaschema = "model-name" : [{
+            "sequence": integer, # identifies the order in which the JSON structure was created from the metadata
+            "name": defined_name (identifier),     @name
+            "use-name" : [string] element_name,
+            "datatype": [string],   @as-type or via constraint
+            "path": [string: path syntax], # Example: "/model_name/x/y/z",
+            "min-occurs": [string: "0" | "1" ],
+            "max-occurs": [string: "1" | "unbounded" ],
+            "structure-type": [string: "assembly" | "field" | "flag":],
+            "default": [variant],
 
-                    "scope": ["global" | "local"], (default: global) @scope
+            "formal-name": [string ],
+            "description": [string ],
+            "remarks": "string",
+            "example" : "string",
 
-                    "in-xml" : [string: "WRAPPED" | "UNWRAPPED" | "WITH_WRAPPER" ],
-                    "group-as" : "name",
-                    "group-as-in-json" : ["ARRAY" | "SINGLETON_OR_ARRAY" | "BY_KEY"],
-                    "group-as-in-xml" : ["GROUPED", "UNGROUPED"],
-                    "json-array-name": "json_key",
-                    "json-value-key": "string"
-                    "json-value-key-flag": "string"
-                    "json-collapsaible" : [ True | False]
-                    "flags": [ { repeat_this_dict }, {} ], (if required: min-occurs=1, max-occurs=1, if not-required: min-occurs=0, max-occurs=1)
-                    "children": [ { repeat this dict }, {} ],
-                    "allowed_values": [ {"value": "value2", "text": "string"}, {} ],
-                    "rules": ["rule_id", "rule_id", "rule_id"],  (if the rule context matches this path location)
-                    "props": ["name": {"value": "string", "namespace": "string"}, {}],
-                    "remarks": "string",
-                    "rules": [ {rule-object-see-below} ],
-                    "rule-references": ["rule_id", "rule_id", "rule_id"], (for rules that apply in more than one place)
-                    "example" : "string",
-                    }]
+            "in-xml" : [string: "WRAPPED" | "UNWRAPPED" | "WITH_WRAPPER" ],
+            "group-as" : "name",
+            "group-as-in-json" : ["ARRAY" | "SINGLETON_OR_ARRAY" | "BY_KEY"],
+            "group-as-in-xml" : ["GROUPED", "UNGROUPED"],
+            "json-array-name": "json_key",
+            "json-value-key": "string",
+            "json-value-key-flag": "string",
+            "json-collapsaible" : [ True | False],
+            "depreciated": True, (If metaschema @depreciated is present and this verison is >= the depreciated version, this is set to True.)
+            "sunsetting": "version", (If metaschema @depreciated is present, but this versiion is still valid, use the sunsetting version.)
+
+            "source": [], # array of strings representing source metaschema file
+            "flags": [ { repeat_this_dict }, {} ], (if required: min-occurs=1, max-occurs=1, if not-required: min-occurs=0, max-occurs=1)
+            "children": [ { repeat this dict }, {} ],
+            "allowed_values": [ {"value": "value2", "text": "string"}, {} ],
+            "rules": ["rule_id", "rule_id", "rule_id"],  (if the rule context matches this path location)
+            "props": ["name": {"value": "string", "namespace": "string"}, {}],
+            "rules": [ {rule-object-see-below} ],
+            "rule-references": ["rule_id", "rule_id", "rule_id"], (for rules that apply in more than one place)
+            }]
 ```
 
 ### Properties and Values

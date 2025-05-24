@@ -1,8 +1,16 @@
-# =============================================================================
-#  --- Common Functions ---
-# =============================================================================
-# Common Functions
-#
+"""
+=============================================================================
+ --- Common Functions ---
+- DATE/TIME FUNCTIONS
+- LOGIC UTILITIES
+- STRING UTILITIES
+- OS INTERACTION UTILITIES
+- HTML UTILITIES
+- UI HELPER UTILITIES
+- MISCELLANEOUS FUNCTIONS
+=============================================================================
+"""
+
 import os
 import re
 from datetime import datetime, timezone
@@ -13,54 +21,10 @@ import getpass as gt
 from loguru import logger
 from typing import Union, Dict, Any 
 
-"""
-
-# def convert_datetime_format(date_str, include_time=True):
-#     ""
-#     Converts various ISO 8601 datetime strings to a formatted date string.
-#     Handles variations including:
-#     - Decimal or whole number seconds
-#     - 'Z' timezone or GMT offset
-    
-#     Args:
-#         date_str (str): ISO 8601 formatted datetime string
-        
-#     Returns:
-#         str: Date formatted as 'Month DD, YYYY'
-#     ""
-#     try:
-#         # First try exact format with milliseconds
-#         dt = datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%S.%fZ")
-#     except ValueError:
-#         try:
-#             # Try without milliseconds
-#             dt = datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%SZ")
-#         except ValueError:
-#             try:
-#                 # Try with timezone offset (e.g., +00:00)
-#                 if '+' in date_str:
-#                     # Split at + and remove the timezone part
-#                     date_part = date_str.split('+')[0]
-#                     if '.' in date_part:
-#                         dt = datetime.strptime(date_part, "%Y-%m-%dT%H:%M:%S.%f")
-#                     else:
-#                         dt = datetime.strptime(date_part, "%Y-%m-%dT%H:%M:%S")
-#                 elif '-' in date_str[19:]:  # Look for minus only after the date part
-#                     # Split at - and remove the timezone part
-#                     date_part = date_str.split('-', 3)[0:3]  # Keep first 3 parts
-#                     date_part = '-'.join(date_part)
-#                     if '.' in date_part:
-#                         dt = datetime.strptime(date_part, "%Y-%m-%dT%H:%M:%S.%f")
-#                     else:
-#                         dt = datetime.strptime(date_part, "%Y-%m-%dT%H:%M:%S")
-#                 else:
-#                     raise ValueError(f"Unhandled date format: {date_str}")
-#             except ValueError as e:
-#                 raise ValueError(f"Unable to parse date string: {date_str}. Error: {str(e)}")
-    
-#     # Convert to the desired format
-#     return dt.strftime("%B %d, %Y  %I:%M:%S %p") if include_time else dt.strftime("%B %d, %Y")
-"""
+# -----------------------------------------------------------------------------
+# =============================================================================
+# DATE/TIME FUNCTIONS
+# =============================================================================
 
 def convert_datetime_format(date_input, include_time=True, assume_localtime=True):
     """
@@ -197,35 +161,6 @@ def convert_datetime_format(date_input, include_time=True, assume_localtime=True
         logger.debug(f"Unexpected error parsing date input '{date_input}': {str(e)}")
         return ""
     
-# -----------------------------------------------------------------------------
-def tell_user(message, log_as = ""):
-    """
-    Outputs a message to the console.
-    """
-    print(message)
-    match log_as:
-        case "info":
-            logger.info(message)
-        case "warning":
-            logger.warning(message)
-        case "error":
-            logger.error(message)
-        case "debug":
-            logger.debug(message)
-        case _:
-            pass # no logging
-
-
-
-def processing(out_char = "."):
-    """
-    Outputs a character to console.
-    Intended to be called iterativley from a loop ton indicate progress.
-    Default character is a period; however, a different character may be
-       passed as an argument.
-    This does not return anything.
-    """
-    print(out_char, end="")
 
 # -----------------------------------------------------------------------------
 def datetime_string(date_time = datetime.now(), format = "%Y-%m-%d--%H-%M-%S")-> str:
@@ -271,6 +206,46 @@ def oscal_date_time_with_timezone(date_time = datetime.now(), format = "%Y-%m-%d
     return ret_value
 
 # -----------------------------------------------------------------------------
+# =============================================================================
+# LOGIC UTILITIES
+# =============================================================================
+def iif(condition, if_true, if_false):
+    """
+    Accepts and evaluates a condition
+    Returns the first parameter if the condition is true
+    Returns the second parameter if false
+    """
+    if condition:
+        return if_true
+    else:
+        return if_false
+
+# -----------------------------------------------------------------------------
+
+# =============================================================================
+# STRING UTILITIES
+# =============================================================================
+def normalize_content(content):
+    """
+    Normalize Content
+    Converts any bytes content to string.
+    Passes through all other content type untouched.
+    Args:
+        content (Union[str, bytes]): The content to normalize, can be a string or bytes.
+    Returns:
+        str: The normalized content as a string."""
+    if isinstance(content, str):
+        pass # We want string. Do nothing.
+        logger.debug("NORMALIZE: Already string - do nothing")
+    elif isinstance(content, bytes):
+        content = content.decode("utf-8")
+        logger.debug(("NORMALIZE: Decoded"))
+    else:
+        logger.debug( ("NORMALIZE: Unhandled content encoding: " + type(content)))
+
+    return content
+
+# -----------------------------------------------------------------------------
 def get_first_non_whitespace_char(data):
     """
     Returns the first character this is not a space or tab.
@@ -288,42 +263,6 @@ def get_first_non_whitespace_char(data):
     return ret_val
 
 # -----------------------------------------------------------------------------
-def iif(condition, if_true, if_false):
-    """
-    Accepts and evaluates a condition
-    Returns the first parameter if the condition is true
-    Returns the second parameter if false
-    """
-    if condition:
-        return if_true
-    else:
-        return if_false
-
-# -----------------------------------------------------------------------------
-# =============================================================================
-# Normalize Content
-# Converts any bytes content to string.
-# Passes through all other content type untouched.
-# =============================================================================
-def normalize_content(content):
-
-    if isinstance(content, str):
-        pass # We want string. Do nothing.
-        logger.debug("NORMALIZE: Already string - do nothing")
-    elif isinstance(content, bytes):
-        content = content.decode("utf-8")
-        logger.debug(("NORMALIZE: Decoded"))
-    else:
-        logger.debug( ("NORMALIZE: Unhandled content encoding: " + type(content)))
-
-    return content
-
-# -----------------------------------------------------------------------------
-# Always returns a string from a JSON key.
-# If the value at the key is string, int, float, complex or boolean, returns the value as a string.
-# if the key exists more than once, it returns the first instance.
-# If the value is a JSON object, it returns the serialized JSON object string.
-# If the key does not exist in the JSON object, returns an empty string.
 def safeJSON(object, keys):
     status = False
     ret_value = ""
@@ -344,14 +283,20 @@ def safeJSON(object, keys):
 
     return ret_value
 
-
 # -----------------------------------------------------------------------------
-# Always returns a string from a JSON key.
-# If the value at the key is string, int, float, complex or boolean, returns the value as a string.
-# if the key exists more than once, it returns the first instance.
-# If the value is a JSON object, it returns the serialized JSON object string.
-# If the key does not exist in the JSON object, returns an empty string.
 def JSON_safe_atomic(object, key):
+    """
+    Always returns a string from a JSON key.
+    If the value at the key is string, int, float, complex or boolean, returns the value as a string.
+    if the key exists more than once, it returns the first instance.
+    If the value is a JSON object, it returns the serialized JSON object string.
+    If the key does not exist in the JSON object, returns an empty string.
+    Args:
+        object (dict): The JSON object to search.
+        key (str): The key to look for in the JSON object.
+    Returns:
+        str: The value at the key as a string, or an empty string if the key does not exist.
+    """
     ret_value = ""
 
     if key in object:
@@ -366,15 +311,53 @@ def JSON_safe_atomic(object, key):
 
     return ret_value
 
-
-
-
-
-
 # -----------------------------------------------------------------------------
-# If the environment variable identified in the argument exits, return the value as a string.
-# If the environment variable identified in the argument does not exit, return an empty string.
+def indent(level, length=3) -> str:
+    return (" " * length * level)
+
+# -------------------------------------------------------------------------
+def has_repeated_ending(full_string, suffix, frequency=2):
+    """
+    Check if a string ends with a specific suffix repeated multiple times.
+    
+    Args:
+        full_string: The string to check
+        suffix: The suffix that might be repeated
+        frequency: Number of times the suffix should be repeated (default: 2)
+        
+    Returns:
+        True if the suffix appears at the end of the string repeated 'frequency' times
+    """
+    if not suffix or not full_string:
+        return False
+        
+    # Calculate the expected length of the repeated suffix
+    repeated_suffix = suffix * frequency
+    repeated_length = len(repeated_suffix)
+    
+    # Check if string is long enough for the repeated suffix
+    if len(full_string) >= repeated_length:
+        # Check if the string ends with the repeated suffix
+        return full_string[-repeated_length:] == repeated_suffix
+    
+    return False
+
+
+# =============================================================================
+# OS INTERACTION UTILITIES
+# =============================================================================
+# -----------------------------------------------------------------------------
 def handle_environment_variables(env_name, verbose = False, error_only = True):
+    """
+    If the environment variable identified in the argument exits, return the value as a string.
+    If the environment variable identified in the argument does not exit, return an empty string.
+    Args:
+        env_name (str): The name of the environment variable to check.
+        verbose (bool): If True, logs debug messages. Default is False.
+        error_only (bool): If True, only logs errors. Default is True.
+    Returns:
+        str: The value of the environment variable if it exists, otherwise an empty string.
+    """
     ret_value = ""
     if env_name in os.environ:
         ret_value = os.environ[env_name]
@@ -386,8 +369,14 @@ def handle_environment_variables(env_name, verbose = False, error_only = True):
     return ret_value
 
 # -----------------------------------------------------------------------------
-# Obtains the user id from the operating system
 def get_user_information():
+    """
+    Returns the current user's username.
+    Uses the getpass module to retrieve the username.
+    If an error occurs, logs the error and returns an empty string.
+    Returns:
+        str: The username of the current user, or an empty string if an error occurs.
+    """
     ret_val = ""
     # TODO make sure this works for Linux and Mac
     try:
@@ -397,11 +386,10 @@ def get_user_information():
         
     return ret_val
 
-# -----------------------------------------------------------------------------
-def indent(level, length=3) -> str:
-    return (" " * length * level)
 
-
+# =============================================================================
+# HTML UTILITIES
+# =============================================================================
 # -----------------------------------------------------------------------------
 def prepare_html_for_json(html_content: str, escape_unicode: bool = True) -> str:
     """
@@ -446,6 +434,7 @@ def prepare_html_for_json(html_content: str, escape_unicode: bool = True) -> str
     
     return content
 
+# -----------------------------------------------------------------------------
 def create_html_update_message(target_id: str, html_content: str, 
                              additional_data: Dict[str, Any] = None) -> str:
     """
@@ -489,6 +478,7 @@ def create_html_update_message(target_id: str, html_content: str,
     except Exception as e:
         raise ValueError(f"Failed to create JSON message: {str(e)}")
 
+# -----------------------------------------------------------------------------
 def is_valid_html_content(html_content: str) -> bool:
     """
     Performs basic validation of HTML content.
@@ -533,12 +523,107 @@ def is_valid_html_content(html_content: str) -> bool:
     
     return len(stack) == 0
 
+# -------------------------------------------------------------------------
+def html_to_json_safe(html_content):
+    """
+    Convert HTML content to a JSON-safe string that can still be interpreted by browsers.
+    
+    Args:
+        html_content (str): HTML content with formatting tags
+        
+    Returns:
+        str: JSON-safe string that browsers can still interpret as HTML
+    """
+    if not html_content:
+        return ""
+    
+    # The key insight: json.dumps() handles all the escaping we need
+    # It will escape quotes, backslashes, newlines, etc.
+    # The result is a properly escaped string for JSON
+    json_safe = json.dumps(html_content)
+    
+    # Remove the surrounding quotes that json.dumps adds
+    # since we just want the escaped content, not a complete JSON string
+    return json_safe[1:-1]
+
+# -------------------------------------------------------------------------
+def html_from_json_safe(json_safe_content):
+    """
+    Convert a JSON-safe HTML string back to regular HTML.
+    
+    Args:
+        json_safe_content (str): JSON-safe HTML string
+        
+    Returns:
+        str: Original HTML content
+    """
+    if not json_safe_content:
+        return ""
+    
+    # Wrap in quotes and use json.loads to unescape
+    return json.loads(f'"{json_safe_content}"')
+
+
+# =============================================================================
+# UI HELPER UTILITIES
+# =============================================================================
+# -----------------------------------------------------------------------------
+def tell_user(message, log_as = ""):
+    """
+    Outputs a message to the console.
+    """
+    print(message)
+    match log_as:
+        case "info":
+            logger.info(message)
+        case "warning":
+            logger.warning(message)
+        case "error":
+            logger.error(message)
+        case "debug":
+            logger.debug(message)
+        case _:
+            pass # no logging
+
+# -----------------------------------------------------------------------------
+def processing(out_char = "."):
+    """
+    Outputs a character to console.
+    Intended to be called iterativley from a loop ton indicate progress.
+    Default character is a period; however, a different character may be
+       passed as an argument.
+    This does not return anything.
+    """
+    print(out_char, end="")
+
+# =============================================================================
+# MISCELLANEOUS FUNCTIONS
+# =============================================================================
+# -----------------------------------------------------------------------------
+def compare_semver(version1, version2):
+    """
+    Compare two semantic versions and return:
+    -1 if version1 < version2
+     0 if version1 == version2
+     1 if version1 > version2
+    """
+    from packaging.version import parse as parse_version
+
+    v1 = parse_version(version1)
+    v2 = parse_version(version2)
+    
+    if v1 < v2:
+        return -1
+    elif v1 > v2:
+        return 1
+    else:
+        return 0
 
 
 # =============================================================================
 #  --- MAIN: Only runs if the module is executed stand-alone. ---
 # =============================================================================
 if __name__ == '__main__':
-    print("Miscellaneous Function Library. Not intended to be run as a stand-alone file.")
+    print("Not intended to be run as a stand-alone file.")
 
 

@@ -47,18 +47,21 @@ CONSTRAINT_ROOT_ELEMENT = "metaschema-meta-constraints"
 CONSTRAINT_TOP_IGNORE = []
 CONSTRAINT_TOP_KEEP = ["context"]
 
-GREEN = "\033[32m"
-BLUE = "\033[34m"
-YELLOW = "\033[33m"
-RED = "\033[31m"
-ORANGE = "\033[38;5;208m"
+GREEN   = "\033[32m"
+BLUE    = "\033[34m"
+YELLOW  = "\033[33m"
+RED     = "\033[31m"
+ORANGE  = "\033[38;5;208m"
 MAGENTA = "\033[35m"
-CYAN = "\033[36m"
-PURPLE = "\033[38;5;129m"
-BOLD = "\033[1m"
-RESET = "\033[0m"
+CYAN    = "\033[36m"
+PURPLE  = "\033[38;5;129m"
+BOLD    = "\033[1m"
+RESET   = "\033[0m"
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
+# TO DO:
+# - Add support for metaschema constraints
+# - Fix handling of CHOICE
+# - Fix incorrect cardinality (possible override issue)
 # -------------------------------------------------------------------------
 def clean_none_values_recursive(dictionary):
     """

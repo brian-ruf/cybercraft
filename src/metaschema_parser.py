@@ -34,7 +34,7 @@ It will issue a WARNING message if it encounteres expected, but unhandled struct
 
 """
 SUPPRESS_XPATH_NOT_FOUND_WARNINGS = True
-RUNAWAY_LIMIT = 100
+RUNAWAY_LIMIT = 2000
 DEBUG_OBJECT = "import-ssp"
 
 PRUNE_JSON = False  # If true, will remove None values and emnpty arrays from the Resolved JSON Metaschema output
@@ -281,39 +281,7 @@ def process_element(element, level=0):
     
     return html
 
-
 # -------------------------------------------------------------------------
-def extract_significant_nodes(tree, nsmap):
-    """
-    Extracts significant nodes from the XML tree.
-    This function is a placeholder and should be implemented based on specific requirements.
-    """
-    logger.debug("Extracting significant nodes")
-
-    content = ""
-    # Example: Extract all 'define-assembly' elements
-    child_elements = data.xpath(tree, nsmap, '/METASCHEMA/*')
-    
-    # Process each child element under METASCHEMA
-    for assembly in child_elements:
-        assembly_tag = assembly.tag.split('}')[-1]  # Remove namespace
-        # logger.debug(f"Processing child:: {assembly_tag}")
-        if assembly_tag not in METASCHEMA_TOP_IGNNORE:
-            logger.debug(f"Adding child: {assembly_tag}")
-            
-            # Convert the entire element to a string
-            element_str = data.xml_to_string(assembly)
-
-            # logger.debug(element_str)
-            content += f"{element_str}\n"
-        else:
-            logger.debug(f"Skipping child: {assembly_tag}")
-
-    logger.debug(f"Extracted content: {len(content)} {str(type(content))}")
-    return content
-# -------------------------------------------------------------------------
-
-
 
 # -------------------------------------------------------------------------
 
@@ -427,20 +395,6 @@ class MetaschemaParser:
 
     # -------------------------------------------------------------------------
 
-
-    # -------------------------------------------------------------------------
-    # def parse_assembly(self, assembly):
-    #     """Parse a define-assembly element."""
-    #     logger.debug("Parsing assembly")
-    #     assembly_dict = {}
-    #     assembly_dict["name"] = self.xpath_atomic("./@name", assembly)
-    #     assembly_dict["type"] = self.xpath_atomic("./@type", assembly)
-    #     assembly_dict["namespace"] = self.xpath_atomic("./@namespace", assembly)
-    #     assembly_dict["json-base-uri"] = self.xpath_atomic("./@json-base-uri", assembly)
-    #     assembly_dict["remarks"] = self.xpath_atomic("./remarks/text()", assembly)
-
-        # Process child elements
-
     # -------------------------------------------------------------------------
     def xpath_atomic(self, xExpr, context=None):
         """
@@ -501,7 +455,8 @@ class MetaschemaParser:
         metaschema_tree = {}
 
         try:
-            metaschema_tree = self.recurse_metaschema(self.oscal_model, "define-assembly")
+            context = self.xpath("/METASCHEMA")
+            metaschema_tree = self.recurse_metaschema(self.oscal_model, "define-assembly", context=context)
 
         except Exception as e:
             logger.error(f"Error building metaschema tree: {e}")
@@ -537,7 +492,7 @@ class MetaschemaParser:
 
         return metaschema_tree
     # -------------------------------------------------------------------------
-    def initialize_metaschema_tree(self):
+    def initialize_metaschema_tree_node(self):
         """
         Initialize the metaschema tree.
         This function sets up the initial structure of the metaschema tree.
@@ -545,7 +500,7 @@ class MetaschemaParser:
         """
 
         # Reset the metaschema tree
-        metaschema_tree = {
+        metaschema_tree_node = {
             "path": None,
             "use-name": None,
             "name": None,
@@ -580,7 +535,7 @@ class MetaschemaParser:
             "rules": [],
         }
         
-        return metaschema_tree
+        return metaschema_tree_node
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
     # TODO: Handle constraints <<<<====---- ****
@@ -593,7 +548,7 @@ class MetaschemaParser:
     # TODO: Fix the recursion detection, such as for task/task or part/part.
     # -------------------------------------------------------------------------
  
-    def recurse_metaschema(self, name, structure_type="define-assembly", parent="", ignore_local=False, already_searched=[], context=None):
+    def recurse_metaschema(self, name, structure_type="define-assembly", parent="", ignore_local=False, already_searched=[], context=None, skip_children=False):
         """
         Recursively build the metaschema tree.
         This function processes the XML tree and extracts significant nodes
@@ -613,10 +568,10 @@ class MetaschemaParser:
         """
         global global_counter, global_unhandled_report, global_stop_here
         global_counter += 1
-        logger.info(f"{GREEN}[{global_counter}] Working in {self.oscal_model} on {structure_type}: {parent}/{name}{RESET}")
+        logger.info(f"{GREEN}[{global_counter}] Working in {self.oscal_model} on {structure_type}:{name} at [{parent}]{RESET}")
 
         # Create the metaschema tree (etablishes consistent sequence for keys that should always be present)
-        metaschema_tree = self.initialize_metaschema_tree()
+        metaschema_tree = self.initialize_metaschema_tree_node()
         metaschema_tree["sequence"] = global_counter
 
         # ===== REASONS TO STOP RECURSION BEFORE COMPLETION ==========================
@@ -643,7 +598,8 @@ class MetaschemaParser:
 
         # .............................................................................
         # Setup xpath query
-        xpath_query = f"{misc.iif(context, ".", "/METASCHEMA")}/{structure_type}"
+        # xpath_query = f"{misc.iif(context, ".", "/METASCHEMA")}/{structure_type}"
+        xpath_query = f"./{structure_type}"
         no_local = misc.iif(ignore_local, " and not(@scope='local')", "")
         xpath_query += f"[@{misc.iif(structure_type in ["field", "flag", "assembly"], "ref", "name")}='{name}'{no_local}]"
         if DEBUG_OBJECT == name:
@@ -652,10 +608,16 @@ class MetaschemaParser:
         result = self.xpath(xpath_query, context)
     
         if result is None:
-            # If nothing was found, look in the imported files
-            logger.debug(f"Did not find <{structure_type}: '{name}' ... > in {self.oscal_model}")
-            metaschema_tree = self.look_in_imports(name, structure_type, parent=parent, ignore_local=ignore_local, already_searched=already_searched)
-
+            if structure_type in ["define-assembly", "define-field", "define-flag"]:
+                if context is not None:
+                    metaschema_tree = self.recurse_metaschema(name, structure_type, parent=parent, ignore_local=False, already_searched=[], context=None)
+                else:
+                    # If nothing was found, look in the imported files
+                    logger.debug(f"Did not find <{structure_type}: '{name}' ... > in {self.oscal_model}")
+                    metaschema_tree = self.look_in_imports(name, structure_type, parent=parent, ignore_local=ignore_local, already_searched=already_searched)
+            else:
+                # assembly, field, and flag should always be found in the passed context.
+                logger.error(f"Did not find <{structure_type}: '{name}' ... > in {data.xml_to_string(context)}")
         else:
             # .............................................................................
             if isinstance(result, list):
@@ -689,27 +651,21 @@ class MetaschemaParser:
 
             # Handle metaschmea attributes, such as @datatype, @min-occurs, @max-occurs
             metaschema_tree = self.handle_attributes(metaschema_tree, definition_obj, structure_type, name, parent)
-            logger.debug(f"After Attributes/metaschema_tree: {misc.iif(metaschema_tree is None, "None", "Has Content")}")    
+            if metaschema_tree is None or metaschema_tree == {}:
+                logger.error(f"Lost data handling attributes for {structure_type} / {name}.")
+                return {} 
             
             # Set default values where appropriate
             metaschema_tree = self.set_default_values(metaschema_tree, definition_obj, structure_type, name, parent)
-
-            if structure_type in ["define-field", "field"]:
-                metaschema_tree.setdefault("in-xml", "WRAPPED")
-
-            # Handle Group As defined in fields and assemblies
-            if structure_type in ["define-assembly", "assembly", "define-field", "field"]:
-                logger.debug(f"Looking for group-as in {structure_type} {name}")
-                temp_group_as = self.xpath(f"./group-as", definition_obj)
-                if temp_group_as is not None:
-                    if temp_group_as.attrib:
-                        logger.debug(f"Has attributes.")
-                        metaschema_tree["group-as"] = temp_group_as.attrib.get("name", "")
-                        if "in-json" in temp_group_as.attrib:
-                            metaschema_tree["group-as-in-json"] = temp_group_as.attrib.get("in-json")
-                        if "in-xml" in temp_group_as.attrib:
-                            metaschema_tree["group-as-in-xml"] = temp_group_as.attrib.get("in-json")
-
+            if metaschema_tree is None or metaschema_tree == {}:
+                logger.error(f"Lost data setting defaults for {structure_type} / {name}.")
+                return {} 
+            
+            # Handle group-as element, which is used to indicate how fields or assemblies should be grouped
+            metaschema_tree = self.handle_group_as(metaschema_tree, definition_obj, structure_type, name, parent)
+            if metaschema_tree is None or metaschema_tree == {}:
+                logger.error(f"Lost data handling group-as for {structure_type} / {name}.")
+                return {}
 
             # Identify which metaschema file this object is from
             if "source" in metaschema_tree:
@@ -717,20 +673,20 @@ class MetaschemaParser:
             else:
                 metaschema_tree["source"] = [self.oscal_model]  
 
-            metaschema_tree["flags"] = self.handle_flags(metaschema_tree, definition_obj, structure_type, name, parent)
+            metaschema_tree["flags"]    = self.handle_flags(metaschema_tree, definition_obj, structure_type, name, parent)
+            logger.debug(f"Back from handle flags in {self.oscal_model} for {structure_type} / {name} in {parent}")
 
-            logger.debug(f"After Flags/metaschema_tree: {misc.iif(metaschema_tree is None, "None", "Has Content")}")    
-
-            # Handle model specification for defined assemblies
-            if structure_type == "define-assembly":
-                model_context = self.xpath(f"./model", definition_obj)  
-                metaschema_tree = self.handel_model(name, structure_type, metaschema_tree, model_context)
+            if not misc.has_repeated_ending(metaschema_tree["path"], f"/{metaschema_tree["use-name"]}", frequency=2):
+                metaschema_tree["children"] = self.handel_model(name, structure_type, metaschema_tree, definition_obj)
+                logger.debug(f"Back from handle model")
             else:
-                logger.debug(f"No model found within {structure_type} {name}")
+                # It is one of several known circular references that needs to be handled.
+                logger.info(f"Circular Reference protection: {name} is the same as the parent at {metaschema_tree["path"]}")
+                metaschema_tree["structure-type"] = "recursive"
+                metaschema_tree["description"] = "<b>Recursive: See parent</b>"
+                metaschema_tree["children"] = []
 
-            logger.debug(f"After Assemblies/metaschema_tree: {misc.iif(metaschema_tree is None, "None", "Has Content")}")   
-
-        if metaschema_tree is None:
+        if metaschema_tree is None or metaschema_tree == {}:
             logger.error(f"Did not find {structure_type} / {name} in {self.oscal_model} or any imports.")
         # else:
         #     # FOR DEBUG ONLY
@@ -738,6 +694,30 @@ class MetaschemaParser:
 
         return metaschema_tree
 
+    # -------------------------------------------------------------------------
+    def handle_group_as(self, metaschema_tree, definition_obj, structure_type, name, parent):
+        """
+        Handle the group-as element for the metaschema tree.
+        This function processes the group-as element and its attributes,
+        setting them in the metaschema tree.
+        """
+        logger.debug(f"Handling group-as for {structure_type} {name}")
+
+        temp_group_as = self.xpath(f"./group-as", definition_obj)
+        if temp_group_as is not None:
+            if structure_type in ["define-assembly", "assembly", "define-field", "field"]:
+
+                if temp_group_as.attrib:
+                    logger.debug(f"Has attributes.")
+                    metaschema_tree["group-as"] = temp_group_as.attrib.get("name", "")
+                    if "in-json" in temp_group_as.attrib:
+                        metaschema_tree["group-as-in-json"] = temp_group_as.attrib.get("in-json")
+                    if "in-xml" in temp_group_as.attrib:
+                        metaschema_tree["group-as-in-xml"] = temp_group_as.attrib.get("in-json")
+            else:
+                logger.warning(f"Group-as found where it is not expected: {structure_type} {name}")
+
+        return metaschema_tree
     # -------------------------------------------------------------------------
     def graceful_accumulate(self, current_value, xExpr, context=None):
         """
@@ -791,6 +771,9 @@ class MetaschemaParser:
             metaschema_tree.setdefault("is-collapsible", False)
             metaschema_tree.setdefault("deprecated", False)
             metaschema_tree.setdefault("default", None)
+            if structure_type in ["define-field", "field"]:
+                metaschema_tree.setdefault("in-xml", "WRAPPED")
+
 
         return metaschema_tree
     # -------------------------------------------------------------------------
@@ -807,33 +790,33 @@ class MetaschemaParser:
         for item in self.imports:
             import_file = item
             parser_object = self.imports[import_file]
-            metaschema_tree = parser_object.recurse_metaschema(name, structure_type, parent=parent, ignore_local=True, already_searched=already_searched)
-            if metaschema_tree is not None:
+            metaschema_tree = parser_object.recurse_metaschema(name, structure_type, parent=parent, ignore_local=True, already_searched=already_searched, context=None)
+            if metaschema_tree is not None and metaschema_tree != {}:
                 break
 
         # Check if we got a meaningful result, not just an empty dict or None
         if metaschema_tree is not None and metaschema_tree.get("structure-type")!= "":
+            logger.debug(f"FOUND in {import_file}: {structure_type}: {name}")
             if name == DEBUG_OBJECT:
                 logger.info(f"DEBUG: FOUND in {import_file}: {structure_type}: {name}")
-        else:
-            # Reset metaschema_tree to None so we continue searching
-            metaschema_tree = None
+        # else:
+        #     # Reset metaschema_tree to None so we continue searching
+        #     metaschema_tree = None
 
         if metaschema_tree is None and not ignore_local: # ignore_local is only false at the top level
             logger.error(f"Did not find {structure_type}: {name} in {self.oscal_model} nor any imports. Parent: {parent}")
-
-
-
-
 
         return metaschema_tree
     # -------------------------------------------------------------------------
     def handle_flags(self, metaschema_tree, definition_obj, structure_type, name, parent):
         """Handle Flags defined or referenced in the Field or Assembly"""
-        logger.debug(f"Handling flags for {structure_type} {name}")
+        logger.info(f"Handling flags for {structure_type} {name}")
+        
+        hold_flags = metaschema_tree.get("flags", [])
 
         temp_flags = self.xpath(f"./(define-flag | flag)", definition_obj)
         if temp_flags is not None:
+            logger.debug(f"Found {len(temp_flags)} flags in {structure_type} {name}")
             if not structure_type in ["define-assembly", "assembly", "define-field", "field"]:
                 logger.warning(f"Flags are only allowed in define-assembly, assembly, define-field, field. Not in {structure_type} {name}")
 
@@ -852,13 +835,13 @@ class MetaschemaParser:
 
                 if flag_name:
                     logger.info(f"{YELLOW}Building: {metaschema_tree["path"]}/@{flag_name}{RESET}")
-                    meta_object = self.recurse_metaschema(flag_name, flag_structure_type, parent=metaschema_tree["path"], context=definition_obj)
-                    if meta_object:
-                        metaschema_tree["flags"].append(meta_object)
-            else:
-                logger.debug(f"No flags found within {structure_type} {name}")
+                    meta_object = self.recurse_metaschema(flag_name, flag_structure_type, parent=metaschema_tree["path"], already_searched=[], context=definition_obj)
+                    if meta_object is not None and meta_object != {}:
+                        hold_flags.append(meta_object)
+        else:
+            logger.debug(f"No flags found within {structure_type} {name}")
         
-        return metaschema_tree
+        return hold_flags
     # -------------------------------------------------------------------------
     def handle_attributes(self, metaschema_tree, definition_obj, structure_type, name, parent):
         """
@@ -926,71 +909,65 @@ class MetaschemaParser:
     # -------------------------------------------------------------------------
     def handel_model(self, name, structure_type, metaschema_tree, context):
         """Handle model specification for defined assemblies"""
+        hold_children = metaschema_tree.get("children", [])
 
-        temp_children = self.xpath(f"./*", context)
-        # If a model is defined, we need to process it
-        if temp_children is not None:
+        if structure_type == "define-assembly":
+            xExpr = f"./model"
+        elif structure_type == "choice":
+            xExpr = f"./model/choice"
+        else:
+            xExpr = f""
 
-            # Loop through each child element
-            # there should only be: field, assembly, define-field, define-assembly, choice, any
-            for child in temp_children:
-                child_structure_type = child.tag.split('}')[-1]  # Remove namespace
-                if child_structure_type in ["field", "assembly", "define-field", "define-assembly", "choice", "any"]:
-                    if child_structure_type in ["define-field", "define-assembly"]:
-                        child_name = child.attrib.get("name", "")
-                    elif child_structure_type in ["field", "assembly"]:
-                        child_name = child.attrib.get("ref", "")
-                    else:
-                        child_name = f"**{child_structure_type.upper()}**"
+        if xExpr != "":
+            children = self.xpath(f"./model", context)
+            if children is not None:
+                for child in children:
+                    child_structure_type = child.tag.split('}')[-1]  # Remove namespace
+                    if child_structure_type in ["field", "assembly", "define-field", "define-assembly", "choice", "any"]:
+                        if child_structure_type in ["define-field", "define-assembly"]:
+                            child_name = child.attrib.get("name", "")
+                        elif child_structure_type in ["field", "assembly"]:
+                            child_name = child.attrib.get("ref", "")
+                        elif child_structure_type in ["choice", "any"]:
+                            child_name = f"{child_structure_type.upper()}"
 
-                    logger.info(f"{ORANGE}Building: {metaschema_tree["path"]}/{child_name} [{child.attrib}]")
+                        logger.info(f"{ORANGE}Building: {metaschema_tree["path"]}/{child_name} [{child.attrib}]")
 
-                    if child_structure_type in ["define-field", "define-assembly", "field", "assembly"]:
-                        if not misc.has_repeated_ending(metaschema_tree["path"], f"/{child_name}", frequency=2):
-                            meta_object = self.recurse_metaschema(child_name, child_structure_type, parent=metaschema_tree["path"], ignore_local=False, context=context, already_searched=[])
+                        if child_structure_type in ["define-field", "define-assembly", "field", "assembly"]:
+
+                            meta_object = self.recurse_metaschema(child_name, child_structure_type, parent=metaschema_tree["path"], ignore_local=False, context=children, already_searched=[])
                             if meta_object is not None and meta_object != {}:
-                                metaschema_tree["children"].append(meta_object)
+                                hold_children.append(meta_object)
                             else:
                                 logger.error(f"Unexpected empty return at {metaschema_tree["path"]} for child: {child_structure_type} {child_name}")
-                        else:
-                            # It is one of several known circular references that needs to be handled.
-                            logger.info(f"Circular Reference protection: {child_name} is the same as the parent at {metaschema_tree["path"] & f"/{child_name}"}.")
+
+
+                        elif child_structure_type == "choice":
                             temp_object = {}
-                            temp_object["name"] = metaschema_tree["name"]
-                            temp_object["use-name"] = metaschema_tree["use-name"]
-                            temp_object["structure-type"] = "recursive"
-                            temp_object["formal-name"] = metaschema_tree["formal-name"]
-                            temp_object["description"] = "<b>Recursive: See parent</b>"
-                            temp_object["path"] = metaschema_tree["path"] + f"/{child_name}"
+                            temp_object["name"] = f"CHOICE"
+                            temp_object["structure-type"] = "choice"
+                            temp_object["path"] = metaschema_tree["path"] # + f"/."
                             temp_object["source"] = metaschema_tree["source"]
-                            metaschema_tree["children"].append(temp_object)
+                            temp_object["children"] = []
 
-                    elif child_structure_type == "choice":
-                        temp_object = {}
-                        temp_object["name"] = f"CHOICE"
-                        temp_object["structure-type"] = "choice"
-                        temp_object["path"] = metaschema_tree["path"] # + f"/."
-                        temp_object["source"] = metaschema_tree["source"]
-                        temp_object["children"] = []
-                        temp_context = self.xpath(f"./choice", context)
+                            # temp_object = self.handel_model(child_name, child_structure_type, temp_object, context=context)
+                            hold_children.append(temp_object)
 
-                        temp_object = self.handel_model(child_name, child_structure_type, temp_object, temp_context)
-                        metaschema_tree["children"].append(temp_object)
+                        elif child_structure_type == "any":
+                            temp_object = {}
+                            temp_object["name"] = f"CHOICE"
+                            temp_object["structure-type"] = "choice"
+                            temp_object["path"] = metaschema_tree["path"] + f"/."
+                            temp_object["source"] = metaschema_tree["source"]
+                            temp_object["children"] = []
+                            hold_children.append(temp_object)
+                            global_unhandled_report.append({"path": metaschema_tree["path"], "structure": metaschema_tree["structure-type"], "child": child_structure_type})
 
-                    elif child_structure_type == "any":
-                        temp_object = {}
-                        temp_object["name"] = f"CHOICE"
-                        temp_object["structure-type"] = "choice"
-                        temp_object["path"] = metaschema_tree["path"] + f"/."
-                        temp_object["source"] = metaschema_tree["source"]
-                        temp_object["children"] = []
-                        metaschema_tree["children"].append(temp_object)
-                        global_unhandled_report.append({"path": metaschema_tree["path"], "structure": metaschema_tree["structure-type"], "child": child_structure_type})
-
-                else:
-                    logger.error(f"Unexpected child structure type: {child_structure_type} in model for {structure_type} {name}")
-
-        return metaschema_tree
+                    else:
+                        logger.error(f"Unexpected child structure type: {child_structure_type} in model for {structure_type} {name}")
+            else:
+                logger.warning(f"No children found in model for {structure_type} {name}")
+        return hold_children
 
 # ========================================================================
 

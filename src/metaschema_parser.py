@@ -35,7 +35,7 @@ It will issue a WARNING message if it encounteres expected, but unhandled struct
 """
 SUPPRESS_XPATH_NOT_FOUND_WARNINGS = True
 RUNAWAY_LIMIT = 2000
-DEBUG_OBJECT = "import-ssp"
+DEBUG_OBJECT = "choice"
 
 PRUNE_JSON = False  # If true, will remove None values and emnpty arrays from the Resolved JSON Metaschema output
 OSCAL_DEFAULT_NAMESPACE = "http://csrc.nist.gov/ns/oscal/1.0"
@@ -58,10 +58,11 @@ PURPLE  = "\033[38;5;129m"
 BOLD    = "\033[1m"
 RESET   = "\033[0m"
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# TO DO:
+# TODO:
 # - Add support for metaschema constraints
-# - Fix handling of CHOICE
-# - Fix incorrect cardinality (possible override issue)
+# - Fix metaschema CHOICE
+# - Handle group-as on output
+# - Handle choicie on output
 # -------------------------------------------------------------------------
 def clean_none_values_recursive(dictionary):
     """
@@ -322,6 +323,59 @@ class MetaschemaParser:
         return ret_value
     
     # -------------------------------------------------------------------------
+    def str_node(self, node):
+        """String representation of the MetaschemaParser."""
+        ret_value = ""
+        ret_value += f"{node["formal-name"]}: {node["use-name"]}"
+        if node["name"] != node["use-name"]:
+            ret_value += f" ({node["name"]})\n"
+        else:
+            ret_value += "\n"
+        ret_value += f"Path: {node["path"]}\n"
+        ret_value += f"Type: {node["structure-type"]}\n"
+        ret_value += f"Datatype: {node["datatype"]}\n"
+        ret_value += f"Cardinality: {node["min-occurs"]} to {node["max-occurs"]}\n"
+        if node["default"] is not None:
+            ret_value += f"Default: {node["default"]}\n"
+        if node["description"]:
+            ret_value += f"Description: {node["description"]}\n"
+        if node["remarks"]:
+            ret_value += f"Remarks: {node["remarks"]}\n"
+        if node["example"]:
+            ret_value += f"Example: {node["example"]}\n"
+        if node["flags"]:
+            ret_value += f"Flags: {len(node["flags"])}\n"
+        if node["source"]:
+            ret_value += f"Source: {', '.join(node["source"])}\n"
+        if node["children"]:
+            ret_value += f"Children: {len(node["children"])}\n"
+        if node["props"]:
+            ret_value += f"Props: {', '.join(node["props"])}\n"
+        if node["group-as"]:
+            ret_value += f"Group As: {node["group-as"]}"
+        if node["group-as-in-json"]:
+            ret_value += f" | in JSON: {node["group-as-in-json"]}"  
+        if node["group-as-in-xml"]:
+            ret_value += f" | in XML: {node["group-as-in-xml"]}"
+        ret_value += "\n"
+        if node["json-array-name"]:
+            ret_value += f"JSON Array Name: {node["json-array-name"]} "
+        if node["json-value-key"]:
+            ret_value += f" JSON Value Key: {node["json-value-key"]}"
+        if node["json-value-key-flag"]:
+            ret_value += f" JSON Value Key Flag: {node["json-value-key-flag"]}"
+        ret_value += "\n"
+        if node["in-xml"]:
+            ret_value += f"In XML: {node["in-xml"]}\n"
+        if node["deprecated"]:
+            ret_value += f"Deprecated: {node["deprecated"]}"
+        if node["sunsetting"]:
+            ret_value += f" Sunsetting: {node["sunsetting"]}"
+        ret_value += "\n"
+        if node["rules"]:
+            ret_value += f"Rules: {len(node["rules"])}\n"
+        return ret_value
+    # -------------------------------------------------------------------------
     async def top_pass(self):
         """Perform the first pass of parsing."""
         logger.debug("Performing top pass")
@@ -546,9 +600,9 @@ class MetaschemaParser:
     # TODO: Handle constraints <<<<====---- ****
         
     # TODO: Fix situations where the ref isn't over-riding the definition, 
-    #       such as with cardinality on //resource/props
-    # TODO: Figure out why several top-level elemnts are not populating. 
+    #       such as with cardinality on //resource/props 
     # TODO: Fix the recursion detection, such as for task/task or part/part.
+    # TODO: Fix handling of CHOICE elements
     # -------------------------------------------------------------------------
  
     def recurse_metaschema(self, name, structure_type="define-assembly", parent="", ignore_local=False, already_searched=[], context=None, skip_children=False):
@@ -571,7 +625,7 @@ class MetaschemaParser:
         """
         global global_counter, global_unhandled_report, global_stop_here
         global_counter += 1
-        logger.info(f"{GREEN}[{global_counter}] Working in {self.oscal_model} on {structure_type}:{name} at [{parent}]{RESET}")
+        logger.debug(f"{GREEN}[{global_counter}] Working in {self.oscal_model} on {structure_type}:{name} at [{parent}]{RESET}")
 
         # Create the metaschema tree (etablishes consistent sequence for keys that should always be present)
         metaschema_tree = self.initialize_metaschema_tree_node()
@@ -595,6 +649,8 @@ class MetaschemaParser:
         else:
             already_searched.append(self.oscal_model)
 
+        if DEBUG_OBJECT == name:
+            logger.info(f"DEBUG: Working on {structure_type}: {name} in {self.oscal_model} under {parent}")
         if structure_type in ["field", "flag", "assembly"]:
             logger.debug(f"Looking for the {structure_type} definition for {name}")
             metaschema_tree = self.recurse_metaschema(name, f"define-{structure_type}", parent=parent, already_searched=[], context=None) 
@@ -680,7 +736,7 @@ class MetaschemaParser:
             logger.debug(f"Back from handle flags in {self.oscal_model} for {structure_type} / {name} in {parent}")
 
             if not misc.has_repeated_ending(metaschema_tree["path"], f"/{metaschema_tree["use-name"]}", frequency=2):
-                metaschema_tree["children"] = self.handel_model(name, structure_type, metaschema_tree, definition_obj)
+                metaschema_tree["children"] = self.handle_children(name, structure_type, metaschema_tree, definition_obj)
                 logger.debug(f"Back from handle model")
             else:
                 # It is one of several known circular references that needs to be handled.
@@ -689,8 +745,14 @@ class MetaschemaParser:
                 metaschema_tree["description"] = "<b>Recursive: See parent</b>"
                 metaschema_tree["children"] = []
 
+        # .............................................................................
+
         if metaschema_tree is None or metaschema_tree == {}:
             logger.error(f"Did not find {structure_type} / {name} in {self.oscal_model} or any imports.")
+        else:
+            if DEBUG_OBJECT == name:
+                logger.info(f"****: Found {structure_type} / {name} in {self.oscal_model} with path: {metaschema_tree["path"]}")
+                logger.info(f"****: metaschema_tree: {self.str_node(metaschema_tree)}")
         # else:
         #     # FOR DEBUG ONLY
         #     global_keep_going = not (name == "property")
@@ -765,18 +827,26 @@ class MetaschemaParser:
             # If any of these have not been defined by this point, set them to default 
             # values per the metaschema specification.
             metaschema_tree.setdefault("datatype", "string")
-            metaschema_tree.setdefault("min-occurs", "0")
-            metaschema_tree.setdefault("max-occurs", "1")
+            if metaschema_tree.get("datatype") is None:
+                metaschema_tree["datatype"] = "string"
+            if metaschema_tree.get("min-occurs") is None:
+                metaschema_tree["min-occurs"] = "0"
+            if metaschema_tree.get("max-occurs") is None:
+                metaschema_tree["max-occurs"] = "1"
             if parent == "": # special case for the root element, which is identified because it has no parent.
                 metaschema_tree["min-occurs"] = "1"
                 metaschema_tree["max-occurs"] = "1"
 
-            metaschema_tree.setdefault("is-collapsible", False)
-            metaschema_tree.setdefault("deprecated", False)
-            metaschema_tree.setdefault("default", None)
-            if structure_type in ["define-field", "field"]:
-                metaschema_tree.setdefault("in-xml", "WRAPPED")
+            if metaschema_tree.get("is-collapsible") is None:
+                metaschema_tree["is-collapsible"] = False
+            if metaschema_tree.get("deprecated") is None:
+                metaschema_tree["deprecated"] = False
+            if metaschema_tree.get("default") is None:
+                metaschema_tree["default"] = None # Explicitly makes present and sets to None
 
+            if structure_type in ["define-field", "field"]:
+                if metaschema_tree.get("in-xml") is None:
+                    metaschema_tree["in-xml"] = "WRAPPED"
 
         return metaschema_tree
     # -------------------------------------------------------------------------
@@ -813,7 +883,7 @@ class MetaschemaParser:
     # -------------------------------------------------------------------------
     def handle_flags(self, metaschema_tree, definition_obj, structure_type, name, parent):
         """Handle Flags defined or referenced in the Field or Assembly"""
-        logger.info(f"Handling flags for {structure_type} {name}")
+        logger.debug(f"Handling flags for {structure_type} {name}")
         
         hold_flags = metaschema_tree.get("flags", [])
 
@@ -837,7 +907,7 @@ class MetaschemaParser:
                     logger.error (f"Flag: {flag_structure_type} contains neither @name nor @ref")
 
                 if flag_name:
-                    logger.info(f"{YELLOW}Building: {metaschema_tree["path"]}/@{flag_name}{RESET}")
+                    logger.debug(f"Building: {metaschema_tree["path"]}/@{flag_name}")
                     meta_object = self.recurse_metaschema(flag_name, flag_structure_type, parent=metaschema_tree["path"], already_searched=[], context=definition_obj)
                     if meta_object is not None and meta_object != {}:
                         hold_flags.append(meta_object)
@@ -853,36 +923,30 @@ class MetaschemaParser:
         updates the metaschema tree accordingly.
         """
         logger.debug("Handling attributes")
-        # Process attributes
-        # if definition_obj.attrib:
-        #     for attr_name, attr_value in definition_obj.attrib.items():
-        #         logger.info(f"Attribute: {attr_name} = {attr_value}")
-        #         metaschema_tree[attr_name] = attr_value
-
 
         if definition_obj.attrib:
             for attr_name, attr_value in definition_obj.attrib.items():
-                logger.info(f"{structure_type} ({name}) Attribute: {attr_name} = {attr_value}")
+                logger.debug(f"{structure_type} ({name}) Attribute: {attr_name} = {attr_value}")
                 match attr_name:
                     case "name" | "ref" | "scope":
                         pass # Already captured: name, ref. Ignoring: scope
                     case "as-type": # for fields and flags
-                        metaschema_tree["datatype"] = attr_value
+                        metaschema_tree["datatype"] = attr_value or metaschema_tree["datatype"]
                     case "required": # For flags
                         if attr_value == "yes":
                             metaschema_tree["min-occurs"] = "1"
                             metaschema_tree["max-occurs"] = "1"
-                        else: # default is "no"
+                        elif attr_value == "no":
                             metaschema_tree["min-occurs"] = "0" 
                             metaschema_tree["max-occurs"] = "1" 
                     case "min-occurs": # For fields and assemblies
-                        metaschema_tree["min-occurs"] = attr_value
+                        metaschema_tree["min-occurs"] = attr_value or metaschema_tree["min-occurs"]
                     case "max-occurs": # For fields and assemblies
-                        metaschema_tree["max-occurs"] = attr_value
+                        metaschema_tree["max-occurs"] = attr_value or metaschema_tree["max-occurs"]
                     case "collapsible": # For fields
                         if attr_value == "yes":
                             metaschema_tree["is-collapsible"] = True
-                        else: # default is "no"
+                        elif attr_value == "no": # default is "no"
                             metaschema_tree["is-collapsible"] = False
                         logger.debug(f"Collapsible: {metaschema_tree['is-collapsible']}")
                         unhandled = {"path": metaschema_tree["path"], "structure": metaschema_tree["structure-type"], attr_name: attr_value}
@@ -910,19 +974,23 @@ class MetaschemaParser:
         return metaschema_tree
     
     # -------------------------------------------------------------------------
-    def handel_model(self, name, structure_type, metaschema_tree, context):
+    def handle_children(self, name, structure_type, metaschema_tree, context, handle_choice=0):
+        global global_unhandled_report, global_counter
         """Handle model specification for defined assemblies"""
         hold_children = metaschema_tree.get("children", [])
+        choice_count = 0
 
         if structure_type == "define-assembly":
             xExpr = f"./model"
         elif structure_type == "choice":
-            xExpr = f"./model/choice"
+            logger.info(f"Handling choice {handle_choice} for {metaschema_tree['path']}")
+            xExpr = f"(./model/choice)[{handle_choice}]"
+            logger.info(f"{xExpr} for {structure_type} {name} in {metaschema_tree["path"]}")
         else:
             xExpr = f""
 
         if xExpr != "":
-            children = self.xpath(f"./model", context)
+            children = self.xpath(xExpr, context)
             if children is not None:
                 for child in children:
                     child_structure_type = child.tag.split('}')[-1]  # Remove namespace
@@ -932,9 +1000,10 @@ class MetaschemaParser:
                         elif child_structure_type in ["field", "assembly"]:
                             child_name = child.attrib.get("ref", "")
                         elif child_structure_type in ["choice", "any"]:
+                            logger.info(f"FOUND {child_structure_type} in {metaschema_tree["path"]}")
                             child_name = f"{child_structure_type.upper()}"
 
-                        logger.info(f"{ORANGE}Building: {metaschema_tree["path"]}/{child_name} [{child.attrib}]")
+                        logger.info(f"[{global_counter}] {ORANGE}Building: {metaschema_tree["path"]}/{child_name} [{child.attrib}]")
 
                         if child_structure_type in ["define-field", "define-assembly", "field", "assembly"]:
 
@@ -946,23 +1015,23 @@ class MetaschemaParser:
 
 
                         elif child_structure_type == "choice":
+                            choice_count += 1
+                            logger.debug(f"Handling choice {choice_count} for {metaschema_tree["path"]}")
                             temp_object = {}
                             temp_object["name"] = f"CHOICE"
                             temp_object["structure-type"] = "choice"
-                            temp_object["path"] = metaschema_tree["path"] # + f"/."
+                            temp_object["path"] = metaschema_tree["path"] 
                             temp_object["source"] = metaschema_tree["source"]
-                            temp_object["children"] = []
+                            temp_object["children"] = self.handle_children(child_name, child_structure_type, temp_object, context=context, handle_choice=choice_count)
 
-                            # temp_object = self.handel_model(child_name, child_structure_type, temp_object, context=context)
                             hold_children.append(temp_object)
 
                         elif child_structure_type == "any":
                             temp_object = {}
-                            temp_object["name"] = f"CHOICE"
-                            temp_object["structure-type"] = "choice"
-                            temp_object["path"] = metaschema_tree["path"] + f"/."
+                            temp_object["name"] = f"ANY"
+                            temp_object["structure-type"] = "any"
+                            temp_object["path"] = metaschema_tree["path"] + f"/*"
                             temp_object["source"] = metaschema_tree["source"]
-                            temp_object["children"] = []
                             hold_children.append(temp_object)
                             global_unhandled_report.append({"path": metaschema_tree["path"], "structure": metaschema_tree["structure-type"], "child": child_structure_type})
 
@@ -1049,6 +1118,17 @@ if __name__ == "__main__":
         level="INFO",
         colorize=True
     )
+
+    logger.add(
+        "output.log",
+        level="DEBUG",  # Log everything to file
+        colorize=False,
+        encoding="utf-8",
+        enqueue=True,
+        backtrace=True,
+        diagnose=True
+    )
+
 
     try:
         exit_code = asyncio.run(main())

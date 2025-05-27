@@ -718,10 +718,11 @@ class MetaschemaParser:
             metaschema_tree["use-name"]            = self.graceful_override(metaschema_tree["use-name"],            "./use-name/text()", definition_obj)
             if metaschema_tree["use-name"] is None or metaschema_tree["use-name"] == "":
                 metaschema_tree["use-name"] = metaschema_tree["name"]
-            if structure_type in ["define-assembly", "assembly", "define-field", "field"]:
-                metaschema_tree["path"] = f"{parent}/{metaschema_tree["use-name"]}"
-            elif structure_type in ["define-flag", "flag"]:
-                metaschema_tree["path"] = f"{parent}/@{metaschema_tree["use-name"]}"
+            if metaschema_tree["path"] is None or metaschema_tree["path"] == "":
+                if structure_type in ["define-assembly", "assembly", "define-field", "field"]:
+                   metaschema_tree["path"] = f"{parent}/{metaschema_tree["use-name"]}"
+                elif structure_type in ["define-flag", "flag"]:
+                    metaschema_tree["path"] = f"{parent}/@{metaschema_tree["use-name"]}"
 
             metaschema_tree["formal-name"]         = self.graceful_override(metaschema_tree["formal-name"],         "./formal-name/text()", definition_obj)
             # metaschema_tree["json-key"]            = self.graceful_override(metaschema_tree["json-key"],            "./json-key/text()", definition_obj)

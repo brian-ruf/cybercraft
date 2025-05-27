@@ -328,51 +328,76 @@ class MetaschemaParser:
         ret_value = ""
         ret_value += f"{node["formal-name"]}: {node["use-name"]}"
         if node["name"] != node["use-name"]:
-            ret_value += f" ({node["name"]})\n"
-        else:
-            ret_value += "\n"
-        ret_value += f"Path: {node["path"]}\n"
-        ret_value += f"Type: {node["structure-type"]}\n"
-        ret_value += f"Datatype: {node["datatype"]}\n"
-        ret_value += f"Cardinality: {node["min-occurs"]} to {node["max-occurs"]}\n"
-        if node["default"] is not None:
-            ret_value += f"Default: {node["default"]}\n"
-        if node["description"]:
-            ret_value += f"Description: {node["description"]}\n"
-        if node["remarks"]:
-            ret_value += f"Remarks: {node["remarks"]}\n"
-        if node["example"]:
-            ret_value += f"Example: {node["example"]}\n"
-        if node["flags"]:
-            ret_value += f"Flags: {len(node["flags"])}\n"
-        if node["source"]:
-            ret_value += f"Source: {', '.join(node["source"])}\n"
-        if node["children"]:
-            ret_value += f"Children: {len(node["children"])}\n"
-        if node["props"]:
-            ret_value += f"Props: {', '.join(node["props"])}\n"
-        if node["group-as"]:
-            ret_value += f"Group As: {node["group-as"]}"
-        if node["group-as-in-json"]:
-            ret_value += f" | in JSON: {node["group-as-in-json"]}"  
-        if node["group-as-in-xml"]:
-            ret_value += f" | in XML: {node["group-as-in-xml"]}"
-        ret_value += "\n"
-        if node["json-array-name"]:
-            ret_value += f"JSON Array Name: {node["json-array-name"]} "
-        if node["json-value-key"]:
-            ret_value += f" JSON Value Key: {node["json-value-key"]}"
-        if node["json-value-key-flag"]:
-            ret_value += f" JSON Value Key Flag: {node["json-value-key-flag"]}"
-        ret_value += "\n"
-        if node["in-xml"]:
-            ret_value += f"In XML: {node["in-xml"]}\n"
-        if node["deprecated"]:
-            ret_value += f"Deprecated: {node["deprecated"]}"
-        if node["sunsetting"]:
+            ret_value += f" ({node["name"]})"
+        if node["deprecated"] is True:
+            ret_value += f" ** Deprecated**"
+        if node["sunsetting"] is not None:
             ret_value += f" Sunsetting: {node["sunsetting"]}"
         ret_value += "\n"
-        if node["rules"]:
+
+        if node["min-occurs"] == "0":
+            if node["max-occurs"] == "1":
+                ret_value += f"[0 or 1]"
+            elif node["max-occurs"] == "unbounded":
+                ret_value += f"[0 or more]"
+            elif node["max-occurs"] is not None:
+                ret_value += f"[0 to {node["max-occurs"]}]"
+        elif node["min-occurs"] == "1":
+            if node["max-occurs"] == "1":
+                ret_value += f"[exactly 1]"
+            elif node["max-occurs"] == "unbounded":
+                ret_value += f"[1 or more]"
+            elif node["max-occurs"] is not None:
+                ret_value += f"[{node["min-occurs"]} to {node["max-occurs"]}]"
+        else:
+            if node["min-occurs"] is not None and node["max-occurs"] is not None:
+                ret_value += f"[{node["min-occurs"]} to {node["max-occurs"]}]"
+            else:
+                ret_value += f"[Cardinality not specified]"
+        ret_value += f" {node["structure-type"]} "
+        ret_value += f" [{node["datatype"]}]"
+        ret_value += f"Path: {node["path"]}\n"
+
+        if node["default"] is not None:
+            ret_value += f"Default: {node["default"]}\n"
+        if node["description"] is not None:
+            ret_value += f"Description: {node["description"]}\n"
+        if node["remarks"] is not None:
+            ret_value += f"Remarks: {node["remarks"]}\n"
+        if node["example"] is not None:
+            ret_value += f"Example: {node["example"]}\n"
+        if node["flags"] is not None:
+            ret_value += f"Flags: {len(node["flags"])}\n"
+        if node["source"] is not None:
+            ret_value += f"Source: {', '.join(node["source"])}\n"
+        if node["children"] is not None:
+            ret_value += f"Children: {len(node["children"])}\n"
+        if node["props"] is not None:
+            ret_value += f"Props: {', '.join(node["props"])}\n"
+
+        if node["group-as"] is not None:
+            ret_value += f"Group As: "
+            if node["group-as-in-json"] is not None:
+                ret_value += f" JSON: {node["group-as-in-json"]}"  
+            if node["group-as-in-xml"] is not None:
+                ret_value += f" XML: {node["group-as-in-xml"]}"
+            ret_value += "\n"
+
+        # if node["json-array-name"]:
+        #     ret_value += f"JSON Array Name: {node["json-array-name"]} "
+        # if node["json-value-key"]:
+        #     ret_value += f" JSON Value Key: {node["json-value-key"]}"
+        # if node["json-value-key-flag"]:
+        #     ret_value += f" JSON Value Key Flag: {node["json-value-key-flag"]}"
+        # ret_value += "\n"
+
+        if node["wrapped-in-xml"] is not None:
+            if node["wrapped-in-xml"]:
+                ret_value += f"In XML: WRAPPED\n"
+            else:
+                ret_value += f"In XML: UNWRAPPED\n"
+            ret_value += "\n"
+        if node["rules"] is not None:
             ret_value += f"Rules: {len(node["rules"])}\n"
         return ret_value
     # -------------------------------------------------------------------------
@@ -569,7 +594,7 @@ class MetaschemaParser:
             "default": None,
             "formal-name": None,
 
-            "in-xml" : None,
+            "wrapped-in-xml" : None,
             "group-as": None,
             "group-as-in-json": None,
             "group-as-in-xml": None,
@@ -753,9 +778,6 @@ class MetaschemaParser:
             if DEBUG_OBJECT == name:
                 logger.info(f"****: Found {structure_type} / {name} in {self.oscal_model} with path: {metaschema_tree["path"]}")
                 logger.info(f"****: metaschema_tree: {self.str_node(metaschema_tree)}")
-        # else:
-        #     # FOR DEBUG ONLY
-        #     global_keep_going = not (name == "property")
 
         return metaschema_tree
 
@@ -771,14 +793,23 @@ class MetaschemaParser:
         temp_group_as = self.xpath(f"./group-as", definition_obj)
         if temp_group_as is not None:
             if structure_type in ["define-assembly", "assembly", "define-field", "field"]:
-
+                logger.debug(f"Found group-as for {structure_type} {name}")
                 if temp_group_as.attrib:
                     logger.debug(f"Has attributes.")
                     metaschema_tree["group-as"] = temp_group_as.attrib.get("name", "")
-                    if "in-json" in temp_group_as.attrib:
-                        metaschema_tree["group-as-in-json"] = temp_group_as.attrib.get("in-json")
                     if "in-xml" in temp_group_as.attrib:
-                        metaschema_tree["group-as-in-xml"] = temp_group_as.attrib.get("in-json")
+                        logger.debug(f"Found in-xml attribute: {temp_group_as.attrib.get('in-xml')}")
+                        if temp_group_as.attrib.get("in-xml") in ["GROUPED"]:
+                            metaschema_tree["wrapped-in-xml"] = temp_group_as.attrib.get("name", "")
+                            metaschema_tree["xpath"] = f"{parent}/{temp_group_as.attrib.get("name", "")}/{metaschema_tree["use-name"]}"
+                        elif temp_group_as.attrib.get("in-xml") in ["UNGROUPED"]:
+                            pass
+                        else:
+                            logger.warning(f"Unexpected in-xml value: {temp_group_as.attrib.get('in-xml')}")
+                        metaschema_tree["group-as-in-xml"] = temp_group_as.attrib.get("in-xml")
+                    if "in-json" in temp_group_as.attrib:
+                        logger.debug(f"Found in-json attribute: {temp_group_as.attrib.get('in-json')}")
+                        metaschema_tree["group-as-in-json"] = temp_group_as.attrib.get("in-json")
             else:
                 logger.warning(f"Group-as found where it is not expected: {structure_type} {name}")
 
@@ -844,9 +875,9 @@ class MetaschemaParser:
             if metaschema_tree.get("default") is None:
                 metaschema_tree["default"] = None # Explicitly makes present and sets to None
 
-            if structure_type in ["define-field", "field"]:
-                if metaschema_tree.get("in-xml") is None:
-                    metaschema_tree["in-xml"] = "WRAPPED"
+            if structure_type in ["define-field", "field", "define-assembly", "assembly"]:
+                if metaschema_tree.get("wrapped-in-xml") is None:
+                    metaschema_tree["wrapped-in-xml"] = True
 
         return metaschema_tree
     # -------------------------------------------------------------------------
@@ -962,12 +993,13 @@ class MetaschemaParser:
                         else:
                             logger.warning(f"Unexpected attribute: <define-{structure_type} name='{name}' {attr_name}='{attr_value}'")
                     case "in-xml":
-                        if structure_type in ["define-field", "field"]:
-                            metaschema_tree["in-xml"] = attr_value
+                        if structure_type in ["define-field", "field", "define-assembly", "assembly"]:
+                            if attr_value in ["WRAPPED", "WITH_WRAPPER"]:
+                                metaschema_tree["wrapped-in-xml"] = True
+                            else:
+                                metaschema_tree["wrapped-in-xml"] = False
                         else:
                             logger.warning(f"Unexpected attribute: <define-{structure_type} name='{name}' {attr_name}='{attr_value}'")
-                        unhandled = {"path": metaschema_tree["path"], "structure": metaschema_tree["structure-type"], attr_name: attr_value}
-                        global_unhandled_report.append(unhandled)
                     case _:
                         logger.warning(f"Unexpected attribute: <{structure_type} ({name}) {attr_name}='{attr_value}'")
 

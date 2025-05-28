@@ -1,6 +1,73 @@
 # Metaschema Parsing
 
-## Metaschema Structure
+## Metaschema Tree
+The metaschema tree is a recursive dictionary representing a fully resolved metaschema definition.  
+Each assembly, flag and field is represented by a metaschema node. The node structure is identical with some fields unused in certain scenarios.
+
+The hierarchy of nodes is built with the top metaschema node representing the OSCAL model's root element. 
+Each flag is represented by its own metaschema node and stored in the `flags` array. 
+Each child field or assembly is represented by its own metaschema node and stored in the `children` array. 
+The pattern repeats as needed until the entire model is represented.
+
+```
+assembly (root level metaschema node)
+|
++- flags: (array of metaschema nodes. One for each flag.)
+|  |
+|  + flag (metaschema node)
+|  + flag (metaschema node)
+|
++- children: (array of metaschema nodes epresenting fields and assemblies)
+   |
+   + assembly [metaschema node - repeat assembly pattern from top]
+   | 
+   +- field (metaschema node)
+      |
+      +- flags
+         |
+         + flag
+         + flag
+
+```
+
+
+`flags` and `children` 
+
+| Name                  | Type     | Values / Example Values                                  | Default      | Description |
+|-----------------------|----------|----------------------------------------------------------|--------------|-------------|
+| path                  | string   | Example: "/model_name/x/y/z"                             |              |             |
+| use-name              | string   |                                                          |              |             |
+| name                  | string   |                                                          |              |             |
+| structure-type        | string   | "assembly", "field", "flag"                              |              |             |
+| datatype              | string   |                                                          |              |             |
+| min-occurs            | string   | "0", "1"                                                 |              |             |
+| max-occurs            | string   | "1", "unbounded"                                         |              |             |
+
+| default               | variant  |                                                          |              |             |
+| formal-name           | string   |                                                          |              |             |
+
+| wrapped-in-xml        | string   | "WRAPPED", "UNWRAPPED", "WITH_WRAPPER"                   |              |             |
+| group-as              | string   |                                                          |              |             |
+| group-as-in-json      | string   | "ARRAY", "SINGLETON_OR_ARRAY", "BY_KEY"                  |              |             |
+| group-as-in-xml       | string   | "GROUPED", "UNGROUPED"                                   |              |             |
+| json-array-name       | string   | "json_key"                                               |              |             |
+| json-value-key        | string   |                                                          |              |             |
+| json-value-key-flag   | string   |                                                          |              |             |
+| json-collapsaible     | boolean  | True, False                                              |              |             |
+| depreciated           | boolean  | True                                                     |              |             |
+| sunsetting            | string   | version                                                  |              |             |
+| sequence              | integer  |                                                          |              |             |
+| source                | array    | [string, ...]                                            |              |             |
+| props                 | array    | [{"name": {"value": "string", "namespace": "uri"}} ]     |              |             |
+
+| description           | array    | [string, ...]                                            |              |             |
+| remarks               | array    | [string, ...]                                            |              |             |
+| example               | array    | [string, ...]                                            |              |             |
+
+| flags                 | array    | [dict, ...]                                              |              |             |
+| children              | array    | [dict, ...]                                              |              |             |
+| rules                 | array    | ["rule_id", ...] or [dict, ...]                          |              |             |
+
 ```json
 metaschema = "model-name" : [{
             "sequence": integer, # identifies the order in which the JSON structure was created from the metadata
@@ -10,16 +77,16 @@ metaschema = "model-name" : [{
             "path": [string: path syntax], # Example: "/model_name/x/y/z",
             "min-occurs": [string: "0" | "1" ],
             "max-occurs": [string: "1" | "unbounded" ],
-            "structure-type": [string: "assembly" | "field" | "flag":],
-            "default": [variant],
+            "structure-type": [ string: "assembly" | "field" | "flag":],
+            "default": variant ,
 
-            "formal-name": [string ],
-            "description": [string ],
-            "remarks": "string",
-            "example" : "string",
+            "formal-name": [ string ],
+            "description": [ string ],
+            "remarks": [ string ],
+            "example": [ string ],
 
             "in-xml" : [string: "WRAPPED" | "UNWRAPPED" | "WITH_WRAPPER" ],
-            "group-as" : "name",
+            "group-as" : string,
             "group-as-in-json" : ["ARRAY" | "SINGLETON_OR_ARRAY" | "BY_KEY"],
             "group-as-in-xml" : ["GROUPED", "UNGROUPED"],
             "json-array-name": "json_key",

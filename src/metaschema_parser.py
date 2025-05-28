@@ -574,7 +574,7 @@ class MetaschemaParser:
 
         return metaschema_tree
     # -------------------------------------------------------------------------
-    def initialize_metaschema_tree_node(self):
+    def initialize_metaschema_node(self):
         """
         Initialize the metaschema tree.
         This function sets up the initial structure of the metaschema tree.
@@ -582,7 +582,7 @@ class MetaschemaParser:
         """
 
         # Reset the metaschema tree
-        metaschema_tree_node = {
+        metaschema_node = {
             "path": None,
             "use-name": None,
             "name": None,
@@ -617,17 +617,12 @@ class MetaschemaParser:
             "rules": [],
         }
         
-        return metaschema_tree_node
+        return metaschema_node
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
-    # TODO: Handle constraints <<<<====---- ****
-    # TODO: Handle constraints <<<<====---- ****
-    # TODO: Handle constraints <<<<====---- ****
-        
-    # TODO: Fix situations where the ref isn't over-riding the definition, 
-    #       such as with cardinality on //resource/props 
+    # TODO: Handle constraints <<<<====---- ****        
     # TODO: Fix the recursion detection, such as for task/task or part/part.
-    # TODO: Fix handling of CHOICE elements
+    # TODO: Fix handling of Group-as elements
     # -------------------------------------------------------------------------
  
     def recurse_metaschema(self, name, structure_type="define-assembly", parent="", ignore_local=False, already_searched=[], context=None, skip_children=False):
@@ -653,7 +648,7 @@ class MetaschemaParser:
         logger.debug(f"{GREEN}[{global_counter}] Working in {self.oscal_model} on {structure_type}:{name} at [{parent}]{RESET}")
 
         # Create the metaschema tree (etablishes consistent sequence for keys that should always be present)
-        metaschema_tree = self.initialize_metaschema_tree_node()
+        metaschema_tree = self.initialize_metaschema_node()
         metaschema_tree["sequence"] = global_counter
 
         # ===== REASONS TO STOP RECURSION BEFORE COMPLETION ==========================

@@ -24,6 +24,8 @@ REM Use --icon to specify the icon for the executable
 REM --add-data=support\*:support ^
 ECHO Compiling application
 pyinstaller --onefile --clean --log-level INFO  ^
+            --strip ^
+            --exclude-module ^
             --name=CyberCraft ^
             --console ^
             --icon=resource\img\favicon.ico ^

@@ -25,6 +25,8 @@ export DEBUG_CC=True
 echo "Compiling application"
 pyinstaller --onefile --clean --log-level DEBUG \
             --name=CyberCraft \
+            --strip \
+            --exclude-module \
             --console \
             --icon=resource/img/favicon.ico \
             cybercraft.py

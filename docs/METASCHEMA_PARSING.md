@@ -30,90 +30,49 @@ assembly (root level metaschema node)
 
 ```
 
+## Metaschema Node: Key Names and Values
 
-`flags` and `children` 
-
-| Name                  | Type     | Values / Example Values                                  | Default      | Description |
+| Key Name              | Type     | Values / Example Values                                  | Default      | Description |
 |-----------------------|----------|----------------------------------------------------------|--------------|-------------|
-| path                  | string   | Example: "/model_name/x/y/z"                             |              |             |
-| use-name              | string   |                                                          |              |             |
-| name                  | string   |                                                          |              |             |
-| structure-type        | string   | "assembly", "field", "flag"                              |              |             |
-| datatype              | string   |                                                          |              |             |
-| min-occurs            | string   | "0", "1"                                                 |              |             |
-| max-occurs            | string   | "1", "unbounded"                                         |              |             |
-
+| path                  | string   | Example: "/model_name/x/y/z"                             |              | XML xPath   |
+| use-name              | string   | token                                                    |              |             |
+| name                  | string   | token                                                    |              |             |
+| structure-type        | string   | "assembly", "field", "flag", "choice", "recursive"       |              |             |
+| datatype              | string   | token: must be a metaschema data type                    | "string"     |             |
+| min-occurs            | string   | "[non-negative-integer]"                                 | "0"          |             |
+| max-occurs            | string   | "[non-negative-integer]" or"unbounded"                   | "1"          |             |
 | default               | variant  |                                                          |              |             |
 | formal-name           | string   |                                                          |              |             |
-
-| wrapped-in-xml        | string   | "WRAPPED", "UNWRAPPED", "WITH_WRAPPER"                   |              |             |
-| group-as              | string   |                                                          |              |             |
+| wrapped-in-xml        | string   | "WRAPPED", "UNWRAPPED", "WITH_WRAPPER"                   | "WRAPPED"    |             |
+| group-as              | string   | token                                                    |              |             |
 | group-as-in-json      | string   | "ARRAY", "SINGLETON_OR_ARRAY", "BY_KEY"                  |              |             |
 | group-as-in-xml       | string   | "GROUPED", "UNGROUPED"                                   |              |             |
 | json-array-name       | string   | "json_key"                                               |              |             |
 | json-value-key        | string   |                                                          |              |             |
 | json-value-key-flag   | string   |                                                          |              |             |
-| json-collapsaible     | boolean  | True, False                                              |              |             |
-| depreciated           | boolean  | True                                                     |              |             |
-| sunsetting            | string   | version                                                  |              |             |
-| sequence              | integer  |                                                          |              |             |
-| source                | array    | [string, ...]                                            |              |             |
-| props                 | array    | [{"name": {"value": "string", "namespace": "uri"}} ]     |              |             |
+| json-collapsaible     | boolean  | True, False                                              | False        |             |
+| depreciated           | boolean  | True, False                                              | False        | If @depreciated is present and this verison is >= the depreciated version, this is set to True. |
+| sunsetting            | string   | version                                                  |              | If @depreciated is present, but this versiion is less than the depreciation target, this includes the version number when depreciation takes effect. |
+| identifier-persistence | string | "per-subject" | |  |
+| identifier-scope | string | "cross-instance" | | |
+| identifier-type | string | "human-oriented", "machine-oriented" | | |
+| identifier-uniqueness | string | instance | | |
+| value-type | string | "identifier", "identifier-reference" | | |
+| sequence              | integer  |                                                          |              | As the tree is built from the definition, this representes the sequence in which this node was created. Used to ensure correct XML sequencing. |
+| source                | array    | [string, ...]                                            |              | The metaschema file where the reference and/or definition is found. May include one file for the definition and a different file for the reference. |
+| props                 | array    | [{"name": {"value": "string", "namespace": "uri"}} ]     |              | Any props found in the metaschema definition |
+| description           | array    | [string, ...]                                            |              | Array includes entries for the defined description and referenced description where both are present. |
+| remarks               | array    | [string, ...]                                            |              | Array includes entries for the defined remarks and referenced remarks where both are present. |
+| example               | array    | [string, ...]                                            |              | Array includes entries for the defined example and referenced example where both are present. |
+| flags                 | array    | [dict, ...]                                              |              | Array of flags for this field or assembly. Each item in the array uses the same metaschema node structure. Not valid when this node is a flag. |
+| children              | array    | [dict, ...]                                              |              | Array of fields or assemblies that are children to this assembly. Each item in the array uses the same metaschema node structure. Not valid when this node is a field or flag. |
+| constraints           | array    | [ -TBD- ]                          |              | Array of defined constraints that apply to this node. |
 
-| description           | array    | [string, ...]                                            |              |             |
-| remarks               | array    | [string, ...]                                            |              |             |
-| example               | array    | [string, ...]                                            |              |             |
 
-| flags                 | array    | [dict, ...]                                              |              |             |
-| children              | array    | [dict, ...]                                              |              |             |
-| rules                 | array    | ["rule_id", ...] or [dict, ...]                          |              |             |
-
-```json
-metaschema = "model-name" : [{
-            "sequence": integer, # identifies the order in which the JSON structure was created from the metadata
-            "name": defined_name (identifier),     @name
-            "use-name" : [string] element_name,
-            "datatype": [string],   @as-type or via constraint
-            "path": [string: path syntax], # Example: "/model_name/x/y/z",
-            "min-occurs": [string: "0" | "1" ],
-            "max-occurs": [string: "1" | "unbounded" ],
-            "structure-type": [ string: "assembly" | "field" | "flag":],
-            "default": variant ,
-
-            "formal-name": [ string ],
-            "description": [ string ],
-            "remarks": [ string ],
-            "example": [ string ],
-
-            "in-xml" : [string: "WRAPPED" | "UNWRAPPED" | "WITH_WRAPPER" ],
-            "group-as" : string,
-            "group-as-in-json" : ["ARRAY" | "SINGLETON_OR_ARRAY" | "BY_KEY"],
-            "group-as-in-xml" : ["GROUPED", "UNGROUPED"],
-            "json-array-name": "json_key",
-            "json-value-key": "string",
-            "json-value-key-flag": "string",
-            "json-collapsaible" : [ True | False],
-            "depreciated": True, (If metaschema @depreciated is present and this verison is >= the depreciated version, this is set to True.)
-            "sunsetting": "version", (If metaschema @depreciated is present, but this versiion is still valid, use the sunsetting version.)
-
-            "source": [], # array of strings representing source metaschema file
-            "flags": [ { repeat_this_dict }, {} ], (if required: min-occurs=1, max-occurs=1, if not-required: min-occurs=0, max-occurs=1)
-            "children": [ { repeat this dict }, {} ],
-            "allowed_values": [ {"value": "value2", "text": "string"}, {} ],
-            "rules": ["rule_id", "rule_id", "rule_id"],  (if the rule context matches this path location)
-            "props": ["name": {"value": "string", "namespace": "string"}, {}],
-            "rules": [ {rule-object-see-below} ],
-            "rule-references": ["rule_id", "rule_id", "rule_id"], (for rules that apply in more than one place)
-            }]
-```
 
 ### Properties and Values
 
-identifier-persistence: per-subject
-identifier-scope: cross-instance
-identifier-type: human-oriented, machine-oriented
-identifier-uniqueness: instance
-value-type: identifier, identifier-reference
+
 
 ## Rules Structure
 
@@ -168,3 +127,56 @@ document = {"model" : "name",
     - rules/constraints
   - Ordinal values are unnecessary
     - Path is only used to tie into metaschema info
+
+## Metaschema Parsing Modules
+
+Once the MetaschemaParser object is instantiated with a Metaschema definition, 
+
+
+The following annotates the logic flow between modules as the Metaschema definition is traversed through all trees across all imported metachema files.
+
+```mermaid
+flowchart LR
+    A[build_metaschema_tree] --> B[recurse_metaschema]
+    
+    subgraph Handler_Functions
+        direction TB
+        C[handle_attributes]
+        D[set_default_values] 
+        E[handle_group_as]
+        F[handle_flags]
+        G[handle_children]
+        H[look_in_imports]
+    end
+    
+    B --> C
+    C --> B
+    
+    B --> D
+    D --> B
+    
+    B --> E
+    E --> B
+    
+    B --> F
+    F --> B
+    F --> B1[recurse_metaschema]
+    
+    B --> G
+    G --> B2[recurse_metaschema]
+    
+    B --> H
+    H --> B3[recurse_metaschema]
+    
+    subgraph "Recursive Call Chain"
+        direction TB
+        B1 -.-> B
+        B2 -.-> B
+        B3 -.-> B
+    end
+
+    classDef primary fill:#2050B0,stroke:#102550,color:white,stroke-width:2px
+    classDef secondary fill:#F8D0B0,stroke:#A06030,color:black,stroke-width:1px
+    class A,B primary
+    class C,D,E,F,G,H secondary
+```

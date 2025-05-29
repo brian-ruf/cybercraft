@@ -27,6 +27,8 @@ cd ..
 echo "Compiling application"
 pyinstaller --onefile --clean --log-level INFO \
             --name=CyberCraft \
+            --strip \
+            --exclude-module \
             --console \
             --icon=resource/img/favicon.ico \
             cybercraft.py

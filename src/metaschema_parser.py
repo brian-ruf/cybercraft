@@ -747,6 +747,12 @@ class MetaschemaParser:
                 logger.error(f"Lost data handling group-as for {structure_type} / {name}.")
                 return {}
 
+            # Handle props 
+            metaschema_node = self.handle_props(metaschema_node, definition_obj, structure_type, name, parent)
+            if metaschema_node is None or metaschema_node == {}:
+                logger.error(f"Lost data handling props for {structure_type} / {name}.")
+                return {} 
+
             # Identify which metaschema file this object is from
             if "source" in metaschema_node:
                 metaschema_node["source"].append(self.oscal_model)
@@ -1025,67 +1031,19 @@ class MetaschemaParser:
                 prop_value = prop.attrib.get("value", "")
                 prop_namespace = prop.attrib.get("namespace", "")
 
-                if prop_name in METASCHEMA_PROPS_HANDLED:
-                    metaschema_node[prop_name] = prop_value
-                prop_value = prop.text.strip() if prop.text else ""
-                if prop_name in METASCHEMA_PROPS_HANDLED:
+                if prop_name in METASCHEMA_PROPS_HANDLED and prop_namespace == "": # TODO handle default namespace
                     metaschema_node[prop_name] = prop_value
                 else:
-                    # Add to props array for later processing
-                    hold_props.append({"name": prop_name, "value": prop_value})
-                    logger.warning(f"Unexpected prop: {prop_name} with value: {prop_value} in {structure_type} {name}")
+                    prop_obj = {
+                        "name": prop_name,
+                        "value": prop_value,
+                        "namespace": prop_namespace}
+                    hold_props.append(prop_obj)
 
+        else:
+            logger.debug(f"No props found in {structure_type} {name}")
 
-
-
-        if definition_obj.attrib:
-            for attr_name, attr_value in definition_obj.attrib.items():
-                logger.debug(f"{structure_type} ({name}) Attribute: {attr_name} = {attr_value}")
-                match attr_name:
-                    case "name" | "ref" | "scope":
-                        pass # Already captured: name, ref. Ignoring: scope
-                    case "as-type": # for fields and flags
-                        metaschema_node["datatype"] = attr_value or metaschema_node["datatype"]
-                    case "required": # For flags
-                        if attr_value == "yes":
-                            metaschema_node["min-occurs"] = "1"
-                            metaschema_node["max-occurs"] = "1"
-                        elif attr_value == "no":
-                            metaschema_node["min-occurs"] = "0" 
-                            metaschema_node["max-occurs"] = "1" 
-                    case "min-occurs": # For fields and assemblies
-                        metaschema_node["min-occurs"] = attr_value or metaschema_node["min-occurs"]
-                    case "max-occurs": # For fields and assemblies
-                        metaschema_node["max-occurs"] = attr_value or metaschema_node["max-occurs"]
-                    case "collapsible": # For fields
-                        if attr_value == "yes":
-                            metaschema_node["is-collapsible"] = True
-                        elif attr_value == "no": # default is "no"
-                            metaschema_node["is-collapsible"] = False
-                        logger.debug(f"Collapsible: {metaschema_node['is-collapsible']}")
-                        unhandled = {"path": metaschema_node["path"], "structure": metaschema_node["structure-type"], attr_name: attr_value}
-                        global_unhandled_report.append(unhandled)
-                    case "deprecated":
-                        if misc.compare_semver(attr_value, self.oscal_version) <= 0:
-                            metaschema_node["deprecated"] = True
-                        else:
-                            metaschema_node["sunsetting"] = attr_value
-                    case "default":
-                        if structure_type in ["define-field", "define-flag"]:
-                            metaschema_node["default"] = attr_value
-                        else:
-                            logger.warning(f"Unexpected attribute: <define-{structure_type} name='{name}' {attr_name}='{attr_value}'")
-                    case "in-xml":
-                        if structure_type in ["define-field", "field", "define-assembly", "assembly"]:
-                            if attr_value in ["WRAPPED", "WITH_WRAPPER"]:
-                                metaschema_node["wrapped-in-xml"] = True
-                            else:
-                                metaschema_node["wrapped-in-xml"] = False
-                        else:
-                            logger.warning(f"Unexpected attribute: <define-{structure_type} name='{name}' {attr_name}='{attr_value}'")
-                    case _:
-                        logger.warning(f"Unexpected attribute: <{structure_type} ({name}) {attr_name}='{attr_value}'")
-
+        metaschema_node["props"] = hold_props
         return metaschema_node
     
     # -------------------------------------------------------------------------
@@ -1119,7 +1077,7 @@ class MetaschemaParser:
                             child_name = f"{child_structure_type.upper()}"
 
                         # print(f"\r[{global_counter}] {ORANGE}Building: {metaschema_node["path"]}/{child_name} [{child.attrib}]", end="", flush=True)
-                        print(f"\r{ORANGE}[{global_counter}] Building: {metaschema_node["path"]}/{child_name} ", end="", flush=True)
+                        print(f"{ORANGE}[{global_counter}] Building: {metaschema_node["path"]}/{child_name} ") # , end="", flush=True)
 
                         if child_structure_type in ["define-field", "define-assembly", "field", "assembly"]:
 

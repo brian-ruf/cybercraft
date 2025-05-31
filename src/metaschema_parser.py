@@ -96,200 +96,6 @@ def clean_none_values_recursive(dictionary):
 
 # -------------------------------------------------------------------------
 
-# =============================================================================
-# CREATES A COLLAPSIBLE HTML TREE FROM OSCAL JSON DATA
-# =============================================================================
-def generate_html_tree(json_data):
-    """Generate HTML with collapsible tree from OSCAL JSON data."""
-    
-    html = """<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OSCAL Schema Tree</title>
-    <style>
-        .tree-view {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-        }
-        .tree-item {
-            margin-left: 20px;
-        }
-        .collapsible {
-            cursor: pointer;
-            user-select: none;
-            padding: 5px;
-            margin: 2px 0;
-            background-color: #f1f1f1;
-            border-radius: 4px;
-            display: block; /* Changed from inline-block to block */
-            width: calc(100% - 10px); /* Account for padding */
-        }
-        .collapsible:hover {
-            background-color: #ddd;
-        }
-        .content {
-            display: none;
-            margin-left: 20px;
-        }
-        .element-name {
-            font-weight: bold;
-            color: #2c5282;
-            text-decoration: none;
-        }
-        .element-name:hover {
-            text-decoration: underline;
-        }
-        .element-details {
-            color: #4a5568;
-            font-size: 0.9em;
-        }
-        .active {
-            display: block;
-        }
-        .type-assembly { color: #3182ce; }
-        .type-field { color: #805ad5; }
-        .type-flag { color: #dd6b20; }
-        .expander {
-            display: inline-block;
-            width: 15px;
-            text-align: center;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        .spacer {
-            display: inline-block;
-            width: 15px;
-        }
-    </style>
-</head>
-<body>
-    <h1>OSCAL Schema Tree</h1>
-    <div class="tree-view">
-"""
-    
-    # Process the root element
-    html += process_element(json_data)
-    
-    html += """
-    </div>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            var expanders = document.getElementsByClassName("expander");
-            for (var i = 0; i < expanders.length; i++) {
-                expanders[i].addEventListener("click", function(e) {
-                    e.stopPropagation(); // Prevent event bubbling
-                    var content = this.parentElement.nextElementSibling;
-                    
-                    if (content.style.display === "block") {
-                        // Collapsing
-                        content.style.display = "none";
-                        this.textContent = "+";
-                    } else {
-                        // Expanding
-                        content.style.display = "block";
-                        this.textContent = "-";
-                    }
-                });
-            }
-            
-            // Stop propagation for element name clicks
-            var elementNames = document.getElementsByClassName("element-name");
-            for (var i = 0; i < elementNames.length; i++) {
-                elementNames[i].addEventListener("click", function(e) {
-                    e.stopPropagation();
-                    // You can add your click handler for the path here
-                    console.log("Clicked on path:", this.getAttribute("data-path"));
-                });
-            }
-            
-            // Add click handler for the collapsible divs (optional)
-            var collapsibles = document.getElementsByClassName("collapsible");
-            for (var i = 0; i < collapsibles.length; i++) {
-                collapsibles[i].addEventListener("click", function(e) {
-                    if (e.target.classList.contains('element-name')) return;
-                    
-                    // Find the expander in this collapsible and trigger its click
-                    var expander = this.querySelector('.expander');
-                    if (expander) {
-                        expander.click();
-                    }
-                });
-            }
-        });
-    </script>
-</body>
-</html>
-"""
-    return html
-
-# -------------------------------------------------------------------------
-def process_element(element, level=0):
-    """Process a single element in the OSCAL schema."""
-    if not isinstance(element, dict):
-        return ""
-    
-    html = ""
-    
-    # Get element properties
-    use_name = element.get('use-name', element.get('name', 'unknown'))
-    structure_type = element.get('structure-type', 'unknown')
-    datatype = element.get('datatype', '')
-    min_occurs = element.get('min-occurs', '')
-    max_occurs = element.get('max-occurs', '')
-    path = element.get('path', '')
-    
-    # Format occurrence information
-    occurrence = ""
-    if min_occurs == "0" and (max_occurs == "1" or max_occurs == "unbounded"):
-        occurrence = "[0 or 1]" if max_occurs == "1" else "[0 or more]"
-    elif min_occurs == "1" and max_occurs == "1":
-        occurrence = "[exactly 1]"
-    elif min_occurs == "1" and max_occurs == "unbounded":
-        occurrence = "[1 or more]"
-    else:
-        occurrence = f"[{min_occurs}..{max_occurs}]"
-    
-    # Check if element has children or flags to determine if we need expansion control
-    has_expandable = (element.get('flags', []) or element.get('children', []))
-    
-    # Create the element header with details
-    html += '<div class="collapsible">'
-    if has_expandable:
-        # Set the initial expander symbol based on level
-        expander_symbol = "-" if level == 0 else "+"
-        html += f'<span class="expander">{expander_symbol}</span> '
-    else:
-        html += '<span class="spacer">&nbsp;</span> '
-    html += f'<a href="#" class="element-name" data-path="{escape(path)}">{escape(use_name)}</a> '
-    html += f'<span class="element-details type-{structure_type}">({structure_type})</span> '
-    html += f'<span class="element-details">{escape(str(datatype))} {occurrence}</span>'
-    html += '</div>'
-    
-    # Create content div for children and flags together
-    if has_expandable:
-        # Set initial display style based on level
-        display_style = "block" if level == 0 else "none"
-        html += f'<div class="content tree-item" style="display: {display_style};">'
-        
-        # Process flags (attributes)
-        flags = element.get('flags', [])
-        for flag in flags:
-            html += process_element(flag, level + 1)
-        
-        # Process children
-        children = element.get('children', [])
-        for child in children:
-            html += process_element(child, level + 1)
-        
-        html += '</div>'
-    
-    return html
-
-# -------------------------------------------------------------------------
-
-# -------------------------------------------------------------------------
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 class MetaschemaParser:
@@ -302,6 +108,8 @@ class MetaschemaParser:
         self.oscal_version = oscal_version
         self.oscal_model = ""
         self.schema_name = ""
+        self.oscal_namespace = ""
+        self.json_base_uri = ""
         self.tree = None
         self.nsmap = {"": METASCHEMA_DEFAULT_NAMESPACE}
         self.support = support
@@ -428,6 +236,9 @@ class MetaschemaParser:
                 self.oscal_version = f"v{self.xpath_atomic("/METASCHEMA/schema-version/text()")}"
                 logger.info(f"DEBUG: Setting version to {self.oscal_version} for {self.oscal_model}")
 
+            self.oscal_namespace = self.xpath_atomic("/METASCHEMA/namespace/text()")
+            self.json_base_uri = self.xpath_atomic("/METASCHEMA/json-base/text()")
+
             await self.setup_imports()
             # await self.handle_imports()
         else:        
@@ -540,7 +351,15 @@ class MetaschemaParser:
 
         try:
             context = self.xpath("/METASCHEMA")
-            metaschema_tree = self.recurse_metaschema(self.oscal_model, "define-assembly", context=context)
+            metschema_tree = {}
+            metaschema_tree = {}
+            metaschema_tree["oscal_model"] = self.oscal_model
+            metaschema_tree["oscal_version"] = self.oscal_version
+            metaschema_tree["schema_name"] = self.schema_name
+            metaschema_tree["oscal_namespace"] = self.oscal_namespace
+            metaschema_tree["json_base_uri"] = self.json_base_uri
+            metaschema_tree["import_inventory"] = self.import_inventory
+            metaschema_tree["nodes"] = self.recurse_metaschema(self.oscal_model, "define-assembly", context=context)
 
         except Exception as e:
             logger.error(f"Error building metaschema tree: {e}")
@@ -550,7 +369,7 @@ class MetaschemaParser:
             if metaschema_tree:
                 if PRUNE_JSON:
                     # Clean up the metaschema tree by removing None values and empty arrays
-                    metaschema_tree = clean_none_values_recursive(metaschema_tree)
+                    metaschema_tree["nodes"] = clean_none_values_recursive(metaschema_tree["nodes"])
 
                 prefix = f"OSCAL_{self.oscal_version}_{self.oscal_model}"
 
@@ -564,13 +383,7 @@ class MetaschemaParser:
                 with open(output_file, 'w', encoding='utf-8') as f:
                     json.dump(global_unhandled_report, f, indent=2)
 
-                # Generate the HTML
-                html_output = generate_html_tree(metaschema_tree)
-                
-                # Write the HTML to a file
-                output_file = f"{prefix}_schema_outline.html"
-                with open(output_file, 'w', encoding='utf-8') as f:
-                    f.write(html_output)
+
         except Exception as e:
             logger.error(f"Error saving metaschema tree: {e}")
 
@@ -782,7 +595,6 @@ class MetaschemaParser:
                 logger.info(f"****: metaschema_node: {self.str_node(metaschema_node)}")
 
         return metaschema_node
-
     # -------------------------------------------------------------------------
     def handle_group_as(self, metaschema_node, definition_obj, structure_type, name, parent):
         """

@@ -9,8 +9,14 @@ from common import *
 
 DATA_LOCATION = "./"
 
+# TODO:
+# - Handle group-as on output
+# - Handle choicie on output
+# - Handle unwrapped on output
+
+
 # =============================================================================
-# CREATES A COLLAPSIBLE HTML TREE FROM OSCAL JSON DATA
+# CREATES A COLLAPSIBLE HTML TREE FROM A FULLY RESOLVED JSON METASCHEMA OBJECT
 # =============================================================================
 def generate_tree_view(metaschema_tree, format):
     """Generate HTML with collapsible tree from OSCAL JSON data."""
@@ -293,7 +299,7 @@ def main():
         prefix = f"OSCAL_{metaschema_tree["oscal_version"]}_{metaschema_tree["oscal_model"]}"
 
 
-        for format in ["xml", "json", "yaml"]:
+        for format in ["xml"]: # , "json", "yaml"]:
             html_output = generate_tree_view(metaschema_tree, format=format)
             output_file = f"{DATA_LOCATION}/{prefix}_outline_{format}.html"
             with open(output_file, 'w', encoding='utf-8') as f:

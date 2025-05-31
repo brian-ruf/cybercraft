@@ -1,15 +1,15 @@
-import os
+# import os
 from loguru import logger
-import json
+# import json
 import uuid
-import pickle
+# import pickle
+from time import sleep
 from typing import Any, Optional
 from common import misc
 from common import database
 from common import network
 import asyncio
 import qasync
-
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Release and Support File Patterns
@@ -68,6 +68,29 @@ OSCAL_SUPPORT_TABLES["filecache"] = database.OSCAL_COMMON_TABLES["filecache"]
 
 OSCAL_DATA_TYPES = {}
 
+# ========================================================================
+async def setup_support(support_file= "./support/support.oscal"):
+    logger.debug(f"Setting up support file: {support_file}")
+    
+    support = await OSCAL_support.create(support_file)
+    cycle = 0
+    while not support.ready:
+        logger.debug("Waiting for support object to be ready...")
+        if support.db_state != "unknown":
+            logger.debug(f"Support file status {support.db_state}")
+            break
+        cycle += 1
+        if cycle > 20:
+            logger.error(f"Support object took too long to be ready.({support.db_state})")
+            break
+        sleep(0.25)
+    if not support.ready:
+        logger.error("Support object is not ready.")
+    else:
+        logger.debug("Support file is ready.")
+
+    return support
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 class OSCAL_support:
     def __init__(self, db_conn, db_type="sqlite3"):
@@ -75,22 +98,18 @@ class OSCAL_support:
         self.db_conn    = db_conn   # The support database connection string or path and filename 
         self.db_type    = db_type   # The support database type (sqlite3, mysql, postgresql, mssql, etc.)
         self.db_state   = "unknown" # The state of the support database (unknown, not-present, empty, populated)
-        # self.db_obj     = None      # The support database object 
         self.versions   = {}        # Supported OSCAL versions available within the support database, and support references
         self.extensions = {}        # Supported OSCAL extensions available within the support database, and support references
         self.backend    = None      # If working within an application, this is the backend object
 
         self.db = database.Database(self.db_type, self.db_conn)
         logger.debug("Support: __init__")
-        # if self.db is not None:
-        #     asyncio.create_task(self.async_init())
-        # else:
-        #     logger.error("Unable to create support database object.")
-        #     self.ready = False
+
     # -------------------------------------------------------------------------
     async def async_init(self):
         logger.debug("Support: async_init")
         self.ready = await self.startup()
+
     # -------------------------------------------------------------------------
     @classmethod
     async def create(cls, db_conn, db_type="sqlite3"):
@@ -106,8 +125,8 @@ class OSCAL_support:
             self.ready = False
 
         return self
-    # -------------------------------------------------------------------------
 
+    # -------------------------------------------------------------------------
     async def startup(self, check_for_updates=False, refresh_all=False):
         """
         Perform startup tasks required to provide OSCAL support.
@@ -157,7 +176,178 @@ class OSCAL_support:
                 self.ready = False
        
         return status
+
     # -------------------------------------------------------------------------
+    async def update(self, fetch="latest", backend=None):
+        """
+        Update OSCAL support content based on the fetch directive.
+        - "all": Clears all re-fetches all OSCAL versions and support files.
+        - "latest": Check for new OSCAL versions and fetch if found.
+        - "vX.Y.Z": Clear and re-fetch a specific OSCAL version and its support files.
+        Args:
+            fetch (str): The directive for fetching OSCAL versions.
+                         - "all" for all versions
+                         - "latest" for the latest version
+                         - "vX.Y.Z" for a specific version
+            backend (Optional[Any]): Optional backend object for status updates.
+        Returns:
+            bool: True if the update was successful, False otherwise.
+        """
+        status = False
+        self.backend = backend
+        
+        try:
+            match fetch:
+                case "all":
+                    self.__status_messages("Starting full refresh of OSCAL support content...")
+                    status = await self.__clear_oscal_versions()
+                case "latest":
+                    self.__status_messages("Checking for new OSCAL versions...")
+                    status = True
+                case _:
+                    if fetch.startswith("v"):
+                        self.__status_messages(f"Updating specific version: {fetch}")
+                        status = await self.__clear_oscal_version(fetch)
+                    else:
+                        logger.error(f"Invalid update directive: {fetch}")
+                        status = False
+            
+            if status:
+                # Get OSCAL versions with periodic status updates
+                status = await self.__get_oscal_versions(fetch)
+            
+            # Final reload of versions
+            await self.__load_versions()
+            
+            self.__status_messages("Update process completed.")
+            
+        except Exception as e:
+            logger.error(f"Error during update: {e}")
+            self.__status_messages(f"Error during update: {str(e)}", "error")
+            status = False
+            
+        return status
+
+    # -------------------------------------------------------------------------
+    async def asset(self, oscal_version, model_name, asset_type):
+        """
+        Returns the asset for the specified OSCAL version and model name.
+        Args:
+            oscal_version (str): The OSCAL version (e.g., "v1.0.0").
+            model_name (str): The OSCAL model name (e.g., "system-security-plan").
+            asset_type (str): The type of asset to retrieve (e.g., "xml-schema", "json-schema").
+        Returns:
+            Optional[Any]: The asset content if found, None otherwise.
+        """
+        status = False
+        filecache_uuid = None
+        asset = None
+
+        if oscal_version in self.versions:
+            query = f"SELECT filecache_uuid FROM oscal_support WHERE version = '{oscal_version}' and model = '{model_name}' and type = '{asset_type}'"
+            results = await self.db.query(query)
+            if results is not None:
+                filecache_uuid = results[0].get("filecache_uuid", None)
+                # logger.debug(f"Found filecache UUID {filecache_uuid} for {oscal_version} and {model_name}.")
+                logger.debug(f"Found filecache UUID {filecache_uuid} for {oscal_version} and {model_name}.")
+                # Check if the filecache UUID is valid
+                if filecache_uuid:
+                    # Get the asset from the filecache
+                    asset = misc.normalize_content(await self.db.retrieve_file(filecache_uuid))
+                else:
+                    logger.error(f"Unable to find asset for {oscal_version} and {model_name}.")
+            else:
+                logger.error(f"Unable to find asset for {oscal_version} and {model_name}.")
+        else:
+            logger.error(f"OSCAL version {oscal_version} is either not valid or not supported.")
+
+        return asset
+
+    # -------------------------------------------------------------------------
+    def supported(self, oscal_version, assets):
+        """
+        Currently not implemented.
+        Checks if the specified OSCAL version and assets are supported.
+        """
+        status = False
+
+
+        return status
+
+    # -------------------------------------------------------------------------
+    async def enumerate_models(self, version):
+        """
+        Enumerate the supported models for a given OSCAL version.
+        Args:
+            version (str): The OSCAL version to enumerate models for (e.g., "v1.0.0").
+        Returns:
+            list: A list of model names supported for the specified OSCAL version.
+            If the version is not found, an empty list is returned.
+        """
+        models = []
+
+        if version in self.versions:
+            query = f"SELECT DISTINCT model FROM oscal_support WHERE version = '{version}' and type = 'xml-schema'"
+            results = await self.db.query(query)
+            if results is not None:
+                # logger.debug(f"Found {len(results)} models for version {version}.")
+                # logger.debug(f"Models: {results}")
+                for entry in results:
+                    models.append(entry.get("model", ""))
+
+        return models
+
+    # -------------------------------------------------------------------------
+    async def add_asset(self, oscal_version, model_name, asset_type, content):
+        """
+        Add a new asset to the support database.
+        Args:
+            oscal_version (str): The OSCAL version (e.g., "v1.0.0").
+            model_name (str): The OSCAL model name (e.g., "system-security-plan").
+            asset_type (str): The type of asset to add (e.g., "xml-schema", "json-schema").
+            content (Any): The content of the asset to add.
+        Returns:
+            bool: True if the asset was added successfully, False otherwise.
+        """
+        status = False
+        uuid_value = str(uuid.uuid4())
+        
+        # Insert into oscal_support table
+        if await self.db.insert("oscal_support", {
+            "version": oscal_version,
+            "model": model_name,
+            "type": asset_type,
+            "filecache_uuid": uuid_value
+        }):
+            # Cache the file content
+            attributes = {
+                "filename": f"{model_name}_{asset_type}.xml",
+                "original_location": "",
+                "mime_type": "application/octet-stream",
+                "file_type": asset_type,
+                "acquired": misc.oscal_date_time_with_timezone()
+            }
+            if await self.db.cache_file(content, uuid_value, attributes):
+                status = True
+                logger.info(f"Added asset {model_name} ({asset_type}) for version {oscal_version}.")
+            else:
+                logger.error(f"Failed to cache file for {model_name} ({asset_type}) for version {oscal_version}.")
+        else:
+            logger.error(f"Failed to insert asset {model_name} ({asset_type}) for version {oscal_version} into database.")
+
+        return status
+
+    # -------------------------------------------------------------------------
+    def is_valid_version(self, version):
+        """
+        Check if the specified OSCAL version is valid and supported.
+        Args:
+            version (str): The OSCAL version to check (e.g., "v1.0.0").
+        Returns:
+            bool: True if the version is valid and supported, False otherwise.
+        """
+        return version in self.versions
+
     # -------------------------------------------------------------------------
     async def __load_versions(self):     
         """
@@ -181,25 +371,7 @@ class OSCAL_support:
             status = True
 
         return status
-    # -------------------------------------------------------------------------
-    async def enumerate_models(self, version):
-        """
-        Enumerate the supported models for a given OSCAL version.
-        """
-        models = []
 
-        status = False
-        
-        if version in self.versions:
-            query = f"SELECT DISTINCT model FROM oscal_support WHERE version = '{version}' and type = 'xml-schema'"
-            results = await self.db.query(query)
-            if results is not None:
-                # logger.debug(f"Found {len(results)} models for version {version}.")
-                # logger.debug(f"Models: {results}")
-                for entry in results:
-                    models.append(entry.get("model", ""))
-
-        return models
     # -------------------------------------------------------------------------
     async def __get_oscal_versions(self, fetch="latest"):
         """Pulls OSCAL version information and support files from GitHub and loads it into the database."""
@@ -356,6 +528,7 @@ class OSCAL_support:
             self.__status_messages(f"Downloaded [{version}] {asset_name}")
         else:
             self.__status_messages(f"Failed to download {asset_name}", "error")
+
     # -------------------------------------------------------------------------
     async def __clear_oscal_version(self, version):
         """
@@ -387,6 +560,7 @@ class OSCAL_support:
 
         return status
     
+    # -------------------------------------------------------------------------
     async def __clear_oscal_versions(self):
         """
         Clear all support content for all OSCAL versions.
@@ -401,93 +575,14 @@ class OSCAL_support:
         else:
             status = True
         return status
+
     # -------------------------------------------------------------------------
     def __status_messages(self, status="", level="info"):
         """Enhanced status message handling"""
         if self.backend is not None:
             self.backend.status_update(status, level)
         logger.info(status)
-    # -------------------------------------------------------------------------
-    async def update(self, fetch="latest", backend=None):
-        """Modified update method to be more granular"""
-        status = False
-        self.backend = backend
-        
-        try:
-            match fetch:
-                case "all":
-                    self.__status_messages("Starting full refresh of OSCAL support content...")
-                    status = await self.__clear_oscal_versions()
-                case "latest":
-                    self.__status_messages("Checking for new OSCAL versions...")
-                    status = True
-                case _:
-                    if fetch.startswith("v"):
-                        self.__status_messages(f"Updating specific version: {fetch}")
-                        status = await self.__clear_oscal_version(fetch)
-                    else:
-                        logger.error(f"Invalid update directive: {fetch}")
-                        status = False
-            
-            if status:
-                # Get OSCAL versions with periodic status updates
-                status = await self.__get_oscal_versions(fetch)
-            
-            # Final reload of versions
-            await self.__load_versions()
-            
-            self.__status_messages("Update process completed.")
-            
-        except Exception as e:
-            logger.error(f"Error during update: {e}")
-            self.__status_messages(f"Error during update: {str(e)}", "error")
-            status = False
-            
-        return status
-
-
-    # -------------------------------------------------------------------------
-    async def asset(self, oscal_version, model_name, asset_type):
-        """
-        Returns the asset for the specified OSCAL version and model name.
-        """
-        status = False
-        filecache_uuid = None
-        asset = None
-
-        if oscal_version in self.versions:
-            query = f"SELECT filecache_uuid FROM oscal_support WHERE version = '{oscal_version}' and model = '{model_name}' and type = '{asset_type}'"
-            results = await self.db.query(query)
-            if results is not None:
-                filecache_uuid = results[0].get("filecache_uuid", None)
-                # logger.debug(f"Found filecache UUID {filecache_uuid} for {oscal_version} and {model_name}.")
-                logger.debug(f"Found filecache UUID {filecache_uuid} for {oscal_version} and {model_name}.")
-                # Check if the filecache UUID is valid
-                if filecache_uuid:
-                    # Get the asset from the filecache
-                    asset = misc.normalize_content(await self.db.retrieve_file(filecache_uuid))
-                else:
-                    logger.error(f"Unable to find asset for {oscal_version} and {model_name}.")
-            else:
-                logger.error(f"Unable to find asset for {oscal_version} and {model_name}.")
-        else:
-            logger.error(f"OSCAL version {oscal_version} is not supported.")
-
-        return asset
-    # -------------------------------------------------------------------------
-    def supported(self, oscal_version, assets):
-        """
-        Identifies the approppriate support files and downloads them.
-        Adds them to the support database.
-        """
-        status = False
-
-
-        return status
-
-# -----------------------------------------------------------------------------
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Main
 if __name__ == '__main__':
-    print("The OSCAL Support Class is not intended to be run as a stand-alone file.")
+    print("The OSCAL Support Class is intended to be part of a larger application.")

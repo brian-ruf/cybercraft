@@ -1,23 +1,23 @@
 import asyncio
 import sys
 import json
-from html import escape
-import html
-# import urllib.request
-from urllib.parse import urljoin
+# from html import escape
+# import html
+# from urllib.parse import urljoin
 from loguru import logger
-from oscal_support import OSCAL_support
-from time import sleep
-
-# import elementpath
-# from elementpath.xpath3 import XPath3Parser
+from oscal_support import *
 from xml.etree import ElementTree
-# from xml.dom import minidom
-
 import xml.etree.ElementTree as ET
 from xml.etree.ElementTree import tostring
-
 from common import *
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# TODO:
+# - Add support for metaschema constraints
+# - Fix metaschema CHOICE
+# TODO: Fix the recursion detection, such as for task/task or part/part.
+# TODO: Fix handling of Group-as elements (May be fixed. Need to verify.)
+# -------------------------------------------------------------------------
 
 global_counter = 0
 global_unhandled_report = []
@@ -38,11 +38,13 @@ RUNAWAY_LIMIT = 2000
 DEBUG_OBJECT = "choice"
 
 PRUNE_JSON = True  # If true, will remove None values and emnpty arrays from the Resolved JSON Metaschema output
-OSCAL_DEFAULT_NAMESPACE = "http://csrc.nist.gov/ns/oscal/1.0"
+OSCAL_DEFAULT_NAMESPACE = "http://csrc.nist.gov/ns/oscal"
 METASCHEMA_DEFAULT_NAMESPACE = "http://csrc.nist.gov/ns/oscal/metaschema/1.0"
 METASCHEMA_TOP_IGNNORE = ["schema-name", "schema-version", "short-name", "namespace", "json-base-uri", "remarks", "import"]
 METASCHEMA_TOP_KEEP = ["define-assembly", "define-field", "define-flag", "constraint"]
 METASCHEMA_PROPS_HANDLED = ["identifier-persistence", "identifier-scope", "identifier-type", "identifier-uniqueness", "value-type"]
+METASCHEMA_RULE_PROPS_HANDLED = []
+METASCHEMA_INDEX_PROPS_HANDLED = []
 METASCHEMA_ROP_NAMESPACE = ["http://csrc.nist.gov/ns/oscal/metaschema/1.0", "http://csrc.nist.gov/ns/metaschema/1.0"]
 METASCHEMA_ROOT_ELEMENT = "METASCHEMA"
 CONSTRAINT_ROOT_ELEMENT = "metaschema-meta-constraints"
@@ -59,13 +61,87 @@ CYAN    = "\033[36m"
 PURPLE  = "\033[38;5;129m"
 BOLD    = "\033[1m"
 RESET   = "\033[0m"
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# TODO:
-# - Add support for metaschema constraints
-# - Fix metaschema CHOICE
-# - Handle group-as on output
-# - Handle choicie on output
-# -------------------------------------------------------------------------
+async def parse_metaschema(support=None, oscal_version=None):
+    status = False
+
+    # If support object is not provided, we have to instantiate it.
+    if support is None:
+        base_url = "./support/support.oscal"
+        support = await OSCAL_support.setup_support(base_url)
+
+    if support.ready:
+        logger.debug("Support file is ready.")
+        status = True
+    else:
+        logger.error("Support object is not ready.")
+
+    # If the support object is not ready, we cannot proceed.
+    if status:
+        if oscal_version is None: # If no version is specified, process all supported versions.
+            logger.info("Processing all supported OSCAL versions.")
+            for version in support.versions.keys():
+                logger.info(f"Version: {version}")
+                parse_metaschema_specific(support, version)
+
+        elif oscal_version in support.versions: # If a valid version is specified, process only that version.
+            logger.info(f"Processing OSCAL version: {oscal_version}")
+            parse_metaschema_specific(support, oscal_version)
+
+        else: # If an invalid version is specified, log an error and exit.
+            logger.error(f"Specified version {oscal_version} is not supported. Available versions: {', '.join(support.versions.keys())}")
+            status = False
+
+    return status
+
+# --------------------------------------------------------------------------
+async def parse_metaschema_specific(support, oscal_version):
+    """
+    Parse a specific metaschema model for a given OSCAL version.
+    This function is used to parse a specific metaschema model
+    for a given OSCAL version.
+    Parameters:
+    - support (OSCAL_support): The OSCAL support object.
+    - oscal_version (str): The OSCAL version to parse.
+    - oscal_model (str): The OSCAL model to parse.
+    Returns:
+    - dict: A dictionary representing the parsed metaschema tree,
+            or an empty dictionary if parsing fails.
+    """
+    logger.info(f"{CYAN}Parsing OSCAL {oscal_version} metaschema.{RESET}")
+    status = True
+    metaschema_tree = {}
+    metaschema_tree["oscal_version"] = oscal_version
+    metaschema_tree["oscal_models"] = {}
+
+    models = await support.enumerate_models(oscal_version)
+    for model in models:
+        # Fetch the XML content
+        model_metaschema = await support.asset(oscal_version, model, "metaschema")
+        if model_metaschema:
+            # Parse the XML content
+            logger.debug(f"Parsing {model} metaschema.")    
+
+            if status:
+                # **** Commented out for testing. Uncomment when ready to use.
+                # parser = await MetaschemaParser.create(model_metaschema, support)
+                # status = await parser.top_pass()
+                # metaschema_tree["oscal_models"][model] = parser.build_metaschema_tree()
+                if metaschema_tree is not None and metaschema_tree != {}:
+                    logger.debug(f"Successfully parsed {model} metaschema.") 
+                else:
+                    logger.error(f"Failed to parse {oscal_version} {model} metaschema. No data returned.")  
+            else:
+                logger.error(f"Failed to setup the {model}. metaschema")
+            
+            status = True
+        else:
+            logger.error(f"Failed to fetch {model} metaschema content.")
+            status = False
+
+    return metaschema_tree
+# --------------------------------------------------------------------------
 def clean_none_values_recursive(dictionary):
     """
     Recursively remove all key/value pairs where the value is None from dictionaries,
@@ -94,9 +170,6 @@ def clean_none_values_recursive(dictionary):
             result[k] = v
     return result
 
-# -------------------------------------------------------------------------
-
-
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 class MetaschemaParser:
     def __init__(self, metaschema, support, import_inventory=[], oscal_version=""):
@@ -115,12 +188,15 @@ class MetaschemaParser:
         self.support = support
         self.imports = {} # list of imports {"metaschema_file_name.xml": MetaschemaParser_Object, ...}
         self.import_inventory = import_inventory
+
+    # -------------------------------------------------------------------------
     @classmethod
     async def create(cls, metaschema, support, import_inventory=[], oscal_version=""):
         logger.debug(f"Creating MetaschemaParser")
         ret_value = None
         ret_value = cls(metaschema, support, import_inventory, oscal_version)
         return ret_value
+
     # -------------------------------------------------------------------------
     def __str__(self):
         """String representation of the MetaschemaParser."""
@@ -210,6 +286,7 @@ class MetaschemaParser:
         if node["rules"] is not None:
             ret_value += f"Rules: {len(node["rules"])}\n"
         return ret_value
+
     # -------------------------------------------------------------------------
     async def top_pass(self):
         """Perform the first pass of parsing."""
@@ -245,6 +322,7 @@ class MetaschemaParser:
             logger.error("Invalid XML content.")
 
         return self.valid_xml
+
     # -------------------------------------------------------------------------
     async def setup_imports(self):
         """Identify import elements and set them up as import objects."""
@@ -287,8 +365,6 @@ class MetaschemaParser:
                                 logger.error(f"Invalid Import file: {imp_file}")
         # logger.info(f"IMPORTS FOR {self.oscal_model}: {self.imports}")
         # logger.info(f"IMPORTS FOR {self.oscal_model}: {self.import_inventory}")
-
-    # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
     def xpath_atomic(self, xExpr, context=None):
@@ -337,8 +413,6 @@ class MetaschemaParser:
         just a string, or a node with HTML formatting.
         Returns the content as a stirng either way.
         """
-        
-
         return data.get_markup_content(self.tree, self.nsmap, xExpr, context)
 
     # -------------------------------------------------------------------------
@@ -359,6 +433,7 @@ class MetaschemaParser:
             metaschema_tree["oscal_namespace"] = self.oscal_namespace
             metaschema_tree["json_base_uri"] = self.json_base_uri
             metaschema_tree["import_inventory"] = self.import_inventory
+
             metaschema_tree["nodes"] = self.recurse_metaschema(self.oscal_model, "define-assembly", context=context)
 
         except Exception as e:
@@ -388,12 +463,13 @@ class MetaschemaParser:
             logger.error(f"Error saving metaschema tree: {e}")
 
         return metaschema_tree
+
     # -------------------------------------------------------------------------
     def initialize_metaschema_node(self):
         """
-        Initialize the metaschema tree.
-        This function sets up the initial structure of the metaschema tree.
-        It is called before building the tree to ensure a consistent starting point.
+        Initialize a new node for the metaschema tree.
+        This function sets up the initial structure of a metaschema tree node.
+        It is called as each node is created, including the top level node.
         """
 
         # Reset the metaschema tree
@@ -406,6 +482,7 @@ class MetaschemaParser:
         metaschema_node["min-occurs"] = None
         metaschema_node["max-occurs"] = None
         metaschema_node["default"] = None
+        metaschema_node["pattern"] = None
         metaschema_node["formal-name"] = None
         metaschema_node["wrapped-in-xml"] = None
         metaschema_node["group-as"] = None
@@ -417,10 +494,10 @@ class MetaschemaParser:
         metaschema_node["json-collapsible"] = None
         metaschema_node["deprecated"] = None
         metaschema_node["sunsetting"] = None
-        for prop_name in METASCHEMA_PROPS_HANDLED:
-            metaschema_node[prop_name] = None
         metaschema_node["sequence"] = 0
         metaschema_node["source"] = []
+        for prop_name in METASCHEMA_PROPS_HANDLED:
+            metaschema_node[prop_name] = None
         metaschema_node["props"] = []
         metaschema_node["description"] = []
         metaschema_node["remarks"] = []
@@ -428,16 +505,84 @@ class MetaschemaParser:
         metaschema_node["flags"] = []
         metaschema_node["children"] = []
         metaschema_node["constraints"] = []
-        metaschema_node[""] = []
 
         return metaschema_node
+
     # -------------------------------------------------------------------------
+    def initialize_metaschema_rule(self):
+        """
+        Initialize a new metaschema rule.
+        This function sets up the initial structure of a metaschema rule.
+        It is called before each rule is created.
+        """
+
+        # Reset the metaschema tree
+        metaschema_rule = {}
+        metaschema_rule["id"] = None
+        metaschema_rule["level"] = None
+        metaschema_rule["name"] = None
+        metaschema_rule["formal-name"] = None
+        metaschema_rule["rule-type"] = None
+        metaschema_rule["datatype"] = None
+        metaschema_rule["default"] = None
+        metaschema_rule["pattern"] = None
+        metaschema_rule["allowed-values"] = {}
+        metaschema_rule["allow-others"] = None
+        metaschema_rule["extensible"] = None
+        metaschema_rule["test"] = None
+        metaschema_rule["message"] = None
+        metaschema_rule["help-url"] = None
+        metaschema_rule[""] = None
+        metaschema_rule[""] = None
+        metaschema_rule[""] = None
+        metaschema_rule[""] = None
+        metaschema_rule[""] = None
+
+
+        metaschema_rule["min-occurs"] = None
+        metaschema_rule["max-occurs"] = None
+
+        metaschema_rule["deprecated"] = None
+        metaschema_rule["sunsetting"] = None
+        metaschema_rule["sequence"] = 0
+        metaschema_rule["source"] = []
+        for prop_name in METASCHEMA_RULE_PROPS_HANDLED:
+            metaschema_rule[prop_name] = None
+        metaschema_rule["props"] = []
+        metaschema_rule["description"] = []
+        metaschema_rule["remarks"] = []
+
+        metaschema_rule["example"] = []
+        metaschema_rule[""] = []
+
+        return metaschema_rule
+
     # -------------------------------------------------------------------------
-    # TODO: Handle constraints <<<<====---- ****        
-    # TODO: Fix the recursion detection, such as for task/task or part/part.
-    # TODO: Fix handling of Group-as elements
-    # -------------------------------------------------------------------------
- 
+    def initialize_metaschema_index(self):
+        """
+        Initialize a new metaschema index.
+        This function sets up the initial structure of a metaschema index.
+        It is called before each index is created.
+        """
+
+        # Reset the metaschema tree
+        metaschema_index = {}
+        metaschema_index["id"] = None
+        metaschema_index["level"] = None
+        metaschema_index["name"] = None
+        metaschema_index["target"] = None
+        metaschema_index["formal-name"] = None
+        metaschema_index["sequence"] = 0
+        metaschema_index["source"] = []
+        for prop_name in METASCHEMA_INDEX_PROPS_HANDLED:
+            metaschema_index[prop_name] = None
+        metaschema_index["props"] = []
+        metaschema_index["pattern"] = None
+        metaschema_index["description"] = []
+        metaschema_index["remarks"] = []
+
+
+    # ------------------------------------------------------------------------- 
     def recurse_metaschema(self, name, structure_type="define-assembly", parent="", ignore_local=False, already_searched=[], context=None, skip_children=False):
         """
         Recursively build the metaschema tree.
@@ -595,6 +740,7 @@ class MetaschemaParser:
                 logger.info(f"****: metaschema_node: {self.str_node(metaschema_node)}")
 
         return metaschema_node
+
     # -------------------------------------------------------------------------
     def handle_group_as(self, metaschema_node, definition_obj, structure_type, name, parent):
         """
@@ -628,6 +774,7 @@ class MetaschemaParser:
                 logger.warning(f"Group-as found where it is not expected: {structure_type} {name}")
 
         return metaschema_node
+
     # -------------------------------------------------------------------------
     def graceful_accumulate(self, current_value, xExpr, context=None):
         """
@@ -643,6 +790,7 @@ class MetaschemaParser:
             current_value.insert(0, temp_value)
 
         return current_value
+
     # -------------------------------------------------------------------------
     def graceful_override(self, current_value, xExpr, context=None):
         """
@@ -658,6 +806,7 @@ class MetaschemaParser:
             ret_value = current_value
 
         return ret_value
+
     # -------------------------------------------------------------------------
     def set_default_values(self, metaschema_node, definition_obj, structure_type, name, parent):
         """
@@ -694,6 +843,7 @@ class MetaschemaParser:
                     metaschema_node["wrapped-in-xml"] = True
 
         return metaschema_node
+
     # -------------------------------------------------------------------------
     def look_in_imports(self, name, structure_type, parent="", ignore_local=False, already_searched=[]):
         """
@@ -725,6 +875,7 @@ class MetaschemaParser:
             logger.debug(f"Did not find {structure_type}: {name} in {self.oscal_model} nor any imports. Parent: {parent}")
 
         return metaschema_node
+
     # -------------------------------------------------------------------------
     def handle_flags(self, metaschema_node, definition_obj, structure_type, name, parent):
         """Handle Flags defined or referenced in the Field or Assembly"""
@@ -760,6 +911,7 @@ class MetaschemaParser:
             logger.debug(f"No flags found within {structure_type} {name}")
         
         return hold_flags
+
     # -------------------------------------------------------------------------
     def handle_attributes(self, metaschema_node, definition_obj, structure_type, name, parent):
         """
@@ -818,6 +970,7 @@ class MetaschemaParser:
                         logger.warning(f"Unexpected attribute: <{structure_type} ({name}) {attr_name}='{attr_value}'")
 
         return metaschema_node
+
     # -------------------------------------------------------------------------
     def handle_props(self, metaschema_node, definition_obj, structure_type, name, parent):
         """
@@ -927,37 +1080,12 @@ class MetaschemaParser:
                 logger.debug(f"No children found in model for {structure_type} {name}")
         return hold_children
 
-# ========================================================================
-
-async def setup_support(support_file= "./support/support.oscal"):
-    logger.debug(f"Setting up support file: {support_file}")
-    
-    support = await OSCAL_support.create(support_file)
-    cycle = 0
-    while not support.ready:
-        logger.debug("Waiting for support object to be ready...")
-        if support.db_state != "unknown":
-            logger.debug(f"Support file status {support.db_state}")
-            break
-        cycle += 1
-        if cycle > 20:
-            logger.error(f"Support object took too long to be ready.({support.db_state})")
-            break
-        sleep(0.25)
-    if not support.ready:
-        logger.error("Support object is not ready.")
-    else:
-        logger.debug("Support file is ready.")
-
-    return support
-# -------------------------------------------------------------------------
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 async def main():
     base_url = "./support/support.oscal"
     status = False
-    parsed_data = ""
-    # base_url = "https://github.com/usnistgov/OSCAL/releases/download/v1.1.3/oscal_complete_metaschema_RESOLVED.xml"
     
-    support = await setup_support(base_url)
+    support = await OSCAL_support.setup_support(base_url)
     if support.ready:
         logger.debug("Support file is ready.")
         status = True
@@ -997,6 +1125,7 @@ async def main():
         ret_value = 1
     return ret_value
 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 if __name__ == "__main__":
     logger.remove()
     logger.add(

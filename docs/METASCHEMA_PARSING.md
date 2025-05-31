@@ -42,6 +42,7 @@ assembly (root level metaschema node)
 | min-occurs            | string   | "[non-negative-integer]"                                 | "0"          |             |
 | max-occurs            | string   | "[non-negative-integer]" or"unbounded"                   | "1"          |             |
 | default               | variant  |                                                          |              |             |
+| pattern               | string   |                                                          |              | regex pattern |
 | formal-name           | string   |                                                          |              |             |
 | wrapped-in-xml        | string   | "WRAPPED", "UNWRAPPED", "WITH_WRAPPER"                   | "WRAPPED"    |             |
 | group-as              | string   | token                                                    |              |             |
@@ -70,11 +71,37 @@ assembly (root level metaschema node)
 
 
 
-### Properties and Values
-
-
-
 ## Rules Structure
+
+| Key Name        | Type     | Values / Example Values                 | Default   | Description      |
+|-----------------|----------|-----------------------------------------|-----------|------------------|
+| id              | string   | "rule_id", UUID                         |           | Unique identifier for the rule. If not present, assign a UUID.                                  |
+| level           | string   | "CRITICAL", "ERROR", "WARNING", "INFORMATIONAL", "DEBUG"  | "ERROR"   | Severity level of the rule. Defaults to "ERROR" if not specified.             |
+| name            | string   | "rule_name"                             |           | Short name for the rule.                                                                        |
+| formal-name     | string   | "formal_name"                           |           | Formal name for the rule.                                                                       |
+| rule-type       | array    | ["let", "allowed-values", "expect", "has-cardinality", "index", "index-has-key", "is-unique", "matches"] |   | One or more types describing the rule's function. |
+| datatype        | string   | "string"                                |           | Data type the rule applies to.                                                                  |
+| default         | string   | "default_value"                         |           | Default value for the flag or field.                                                            |
+| pattern         | string   | "regex_pattern"                         |           | Regular expression pattern the value must match.                                                |
+| allowed-values  | dict     | {"value": "value text", ...}            |           | List of allowed values for the field or flag.                                             |
+| allow-others    | boolean  | True, False                             |           | Whether values outside `allowed-values` are permitted.                                          |
+| extensible      | string   | "none", "model", "external"             | "model"   | Indicates if the rule is extensible and how.                                                    |
+| test            | string   | "metapath-string"                       |           | Metapath expression used for testing the rule.                                                  |
+| index-key       | object   | {"target": "string", "pattern": "string", "remarks": "string"} |           | Index key definition, with target (xpath), pattern (regex), and remarks. |
+| message         | string   | "string"                                |           | Message to display when the rule is triggered.                                                  |
+| source          | object   | {"organization": "string", "url": "string", "version": "string"} |           | Source information for the rule.                                       |
+| context         | array    | ["/model_name/x/y/z", "/model_name/a/b/c"] |           | Context paths where the rule applies.                                                        |
+| target          | string   | "./p/d/q"                               |           | Target path for the rule.                                                                       |
+| help-url        | array    | ["uri", "uri"]                          |           | URLs for additional help or documentation.                                                      |
+| help-text       | array    | ["string", "string"]                    |           | Help text strings for the rule.                                                                 |
+| min-occurs      | string   | "0"                                     | "0"       | Minimum number of occurrences.                                                                  |
+| max-occurs      | string   | "unbounded"                             | "1"       | Maximum number of occurrences.                                                                  |
+| depreciated     | boolean  | True, False                             | False     | True if the rule is deprecated in this version or later.                                        |
+| sunsetting      | string   | "version"                               |           | Version when the rule will be sunset (if applicable).                                           |
+| let             | object   | {"var-name": "expression-value", ...}   |           | Variables defined by let statements for this context.                                           |
+| props           | array    | [{"name": {"value": "string", "namespace": "uri"}} ] |              | Any props found in the metaschema definition                                    |
+| description     | string   | "description"                           |           | Human-readable description of the rule.                                                         |
+| remarks         | string   | "string"                                |           | Additional remarks about the rule.                                                              |
 
 ```json
         rules = {"id": "rule_id", (if no ID present, assign a UUID)
@@ -106,6 +133,16 @@ assembly (root level metaschema node)
                 "remarks": "string"
                 }
 ```
+
+### Indexes
+
+
+
+```JSON
+indexes = {}
+
+```
+
 
 ## Data Structure
 

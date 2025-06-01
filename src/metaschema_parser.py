@@ -34,7 +34,7 @@ It will issue a WARNING message if it encounteres expected, but unhandled struct
 
 """
 SUPPRESS_XPATH_NOT_FOUND_WARNINGS = True
-RUNAWAY_LIMIT = 2000
+RUNAWAY_LIMIT = 4000
 DEBUG_OBJECT = "choice"
 
 PRUNE_JSON = True  # If true, will remove None values and emnpty arrays from the Resolved JSON Metaschema output
@@ -69,7 +69,7 @@ async def parse_metaschema(support=None, oscal_version=None):
     # If support object is not provided, we have to instantiate it.
     if support is None:
         base_url = "./support/support.oscal"
-        support = await OSCAL_support.setup_support(base_url)
+        support = await setup_support(base_url)
 
     if support.ready:
         logger.debug("Support file is ready.")
@@ -83,11 +83,14 @@ async def parse_metaschema(support=None, oscal_version=None):
             logger.info("Processing all supported OSCAL versions.")
             for version in support.versions.keys():
                 logger.info(f"Version: {version}")
-                parse_metaschema_specific(support, version)
+                status = await parse_metaschema_specific(support, version)
+                if not status:
+                    logger.error(f"Failed to parse metaschema for version {version}.")
+                    break
 
         elif oscal_version in support.versions: # If a valid version is specified, process only that version.
             logger.info(f"Processing OSCAL version: {oscal_version}")
-            parse_metaschema_specific(support, oscal_version)
+            status = await parse_metaschema_specific(support, oscal_version)
 
         else: # If an invalid version is specified, log an error and exit.
             logger.error(f"Specified version {oscal_version} is not supported. Available versions: {', '.join(support.versions.keys())}")
@@ -109,6 +112,7 @@ async def parse_metaschema_specific(support, oscal_version):
     - dict: A dictionary representing the parsed metaschema tree,
             or an empty dictionary if parsing fails.
     """
+    global global_counter
     logger.info(f"{CYAN}Parsing OSCAL {oscal_version} metaschema.{RESET}")
     status = True
     metaschema_tree = {}
@@ -116,19 +120,21 @@ async def parse_metaschema_specific(support, oscal_version):
     metaschema_tree["oscal_models"] = {}
 
     models = await support.enumerate_models(oscal_version)
+
     for model in models:
+        global_counter = 0
         # Fetch the XML content
+        logger.info(f"Parsing {model} metaschema.")    
         model_metaschema = await support.asset(oscal_version, model, "metaschema")
         if model_metaschema:
             # Parse the XML content
-            logger.debug(f"Parsing {model} metaschema.")    
 
             if status:
                 # **** Commented out for testing. Uncomment when ready to use.
-                # parser = await MetaschemaParser.create(model_metaschema, support)
-                # status = await parser.top_pass()
-                # metaschema_tree["oscal_models"][model] = parser.build_metaschema_tree()
-                if metaschema_tree is not None and metaschema_tree != {}:
+                parser = await MetaschemaParser.create(model_metaschema, support)
+                status = await parser.top_pass()
+                metaschema_tree["oscal_models"][model] = parser.build_metaschema_tree()
+                if metaschema_tree["oscal_models"][model] is not None and metaschema_tree["oscal_models"][model] != {}:
                     logger.debug(f"Successfully parsed {model} metaschema.") 
                 else:
                     logger.error(f"Failed to parse {oscal_version} {model} metaschema. No data returned.")  
@@ -139,6 +145,9 @@ async def parse_metaschema_specific(support, oscal_version):
         else:
             logger.error(f"Failed to fetch {model} metaschema content.")
             status = False
+
+    if status:
+        status = support.add_asset(oscal_version, "complete", "processed", json.dumps(metaschema_tree))
 
     return metaschema_tree
 # --------------------------------------------------------------------------
@@ -448,15 +457,15 @@ class MetaschemaParser:
 
                 prefix = f"OSCAL_{self.oscal_version}_{self.oscal_model}"
 
-                # save to a JSON file
-                output_file = f"{prefix}_FULLY_RESOLVED_metaschema.json"
-                with open(output_file, 'w', encoding='utf-8') as f:
-                    json.dump(metaschema_tree, f, indent=2)
+                # # save to a JSON file
+                # output_file = f"{prefix}_FULLY_RESOLVED_metaschema.json"
+                # with open(output_file, 'w', encoding='utf-8') as f:
+                #     json.dump(metaschema_tree, f, indent=2)
 
 
-                output_file = f"{prefix}_unhandled_report.json"
-                with open(output_file, 'w', encoding='utf-8') as f:
-                    json.dump(global_unhandled_report, f, indent=2)
+                # output_file = f"{prefix}_unhandled_report.json"
+                # with open(output_file, 'w', encoding='utf-8') as f:
+                #     json.dump(global_unhandled_report, f, indent=2)
 
 
         except Exception as e:
@@ -1081,51 +1090,6 @@ class MetaschemaParser:
         return hold_children
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-async def main():
-    base_url = "./support/support.oscal"
-    status = False
-    
-    support = await OSCAL_support.setup_support(base_url)
-    if support.ready:
-        logger.debug("Support file is ready.")
-        status = True
-    else:
-        logger.error("Support object is not ready.")
-
-    if status:
-        for version in support.versions.keys():
-            logger.info(f"Version: {version}")
-
-            models = await support.enumerate_models(version)
-            for model in models:
-                logger.info(f"Processing {version}: {model}")
-                # Fetch the XML content
-                model_metaschema = await support.asset(version, model, "metaschema")
-                if model_metaschema:
-                    # Parse the XML content
-                    logger.debug(f"Parsing {model} metaschema.")    
-                    parser = await MetaschemaParser.create(model_metaschema, support)
-                    status = await parser.top_pass()
-
-                    if status:
-                        status = parser.build_metaschema_tree()
-                    else:
-                        logger.error(f"Failed to setup the {model}. metaschema")
-                    
-                    status = True
-
-                # only parsing first model for now
-                break
-            # only parsing first version for now
-            break
-
-    if status:
-        ret_value = 0
-    else:
-        ret_value = 1
-    return ret_value
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 if __name__ == "__main__":
     logger.remove()
     logger.add(
@@ -1144,9 +1108,8 @@ if __name__ == "__main__":
         diagnose=True
     )
 
-
     try:
-        exit_code = asyncio.run(main())
+        exit_code = asyncio.run(parse_metaschema(oscal_version="v1.1.3"))
         logger.info(f"Application exited with code: {exit_code}")
         sys.exit(exit_code)
     except Exception as e:

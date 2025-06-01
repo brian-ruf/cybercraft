@@ -287,7 +287,7 @@ class OSCAL_support:
         models = []
 
         if version in self.versions:
-            query = f"SELECT DISTINCT model FROM oscal_support WHERE version = '{version}' and type = 'xml-schema'"
+            query = f"SELECT DISTINCT model FROM oscal_support WHERE version = '{version}' and type = 'xml-schema' and model != 'complete'"
             results = await self.db.query(query)
             if results is not None:
                 # logger.debug(f"Found {len(results)} models for version {version}.")

@@ -34,7 +34,7 @@ It will issue a WARNING message if it encounteres expected, but unhandled struct
 
 """
 SUPPRESS_XPATH_NOT_FOUND_WARNINGS = True
-RUNAWAY_LIMIT = 4000
+RUNAWAY_LIMIT = 8000
 DEBUG_OBJECT = "choice"
 
 PRUNE_JSON = True  # If true, will remove None values and emnpty arrays from the Resolved JSON Metaschema output
@@ -63,8 +63,19 @@ BOLD    = "\033[1m"
 RESET   = "\033[0m"
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-async def parse_metaschema(support=None, oscal_version=None):
+async def parse_metaschema(support=None, oscal_version=None) -> int:
+    """
+    Parse the OSCAL metaschema for a given version.
+    This function is used to parse the OSCAL metaschema for a given version.
+    Parameters:
+    - support (OSCAL_support): The OSCAL support object.
+    - oscal_version (str): The OSCAL version to parse. If None, all supported versions are processed.
+    Returns:
+    - int: 0 if successful, 1 if there was an error.
+    """
+
     status = False
+    ret_value = 1
 
     # If support object is not provided, we have to instantiate it.
     if support is None:
@@ -77,7 +88,7 @@ async def parse_metaschema(support=None, oscal_version=None):
     else:
         logger.error("Support object is not ready.")
 
-    # If the support object is not ready, we cannot proceed.
+    # If the support object is ready, we can proceed.
     if status:
         if oscal_version is None: # If no version is specified, process all supported versions.
             logger.info("Processing all supported OSCAL versions.")
@@ -95,8 +106,13 @@ async def parse_metaschema(support=None, oscal_version=None):
         else: # If an invalid version is specified, log an error and exit.
             logger.error(f"Specified version {oscal_version} is not supported. Available versions: {', '.join(support.versions.keys())}")
             status = False
+    if status:
+        ret_value = 0
+    else:
+        logger.error("Failed to parse metaschema. Exiting with error code 1.")
+        ret_value = 1
 
-    return status
+    return ret_value
 
 # --------------------------------------------------------------------------
 async def parse_metaschema_specific(support, oscal_version):
@@ -122,34 +138,34 @@ async def parse_metaschema_specific(support, oscal_version):
     models = await support.enumerate_models(oscal_version)
 
     for model in models:
-        global_counter = 0
-        # Fetch the XML content
-        logger.info(f"Parsing {model} metaschema.")    
-        model_metaschema = await support.asset(oscal_version, model, "metaschema")
-        if model_metaschema:
-            # Parse the XML content
-
-            if status:
-                # **** Commented out for testing. Uncomment when ready to use.
-                parser = await MetaschemaParser.create(model_metaschema, support)
-                status = await parser.top_pass()
-                metaschema_tree["oscal_models"][model] = parser.build_metaschema_tree()
-                if metaschema_tree["oscal_models"][model] is not None and metaschema_tree["oscal_models"][model] != {}:
-                    logger.debug(f"Successfully parsed {model} metaschema.") 
+        if model != "complete":
+            global_counter = 0
+            # Fetch the XML content
+            logger.info(f"Parsing {model} metaschema.")    
+            model_metaschema = await support.asset(oscal_version, model, "metaschema")
+            if model_metaschema:
+                if status:
+                    # **** Commented out for testing. Uncomment when ready to use.
+                    parser = await MetaschemaParser.create(model_metaschema, support)
+                    status = await parser.top_pass()
+                    metaschema_tree["oscal_models"][model] = parser.build_metaschema_tree()
+                    if metaschema_tree["oscal_models"][model] is not None and metaschema_tree["oscal_models"][model] != {}:
+                        logger.debug(f"Successfully parsed {model} metaschema.") 
+                    else:
+                        logger.error(f"Failed to parse {oscal_version} {model} metaschema. No data returned.")  
                 else:
-                    logger.error(f"Failed to parse {oscal_version} {model} metaschema. No data returned.")  
+                    logger.error(f"Failed to setup the {model}. metaschema")
+                
+                status = True
             else:
-                logger.error(f"Failed to setup the {model}. metaschema")
-            
-            status = True
-        else:
-            logger.error(f"Failed to fetch {model} metaschema content.")
-            status = False
+                logger.error(f"Failed to fetch {model} metaschema content.")
+                status = False
 
     if status:
-        status = support.add_asset(oscal_version, "complete", "processed", json.dumps(metaschema_tree))
+        logger.info(f"{GREEN}Successfully parsed all {oscal_version} metaschema models. Adding to support module.{RESET}")
+        status = await support.add_asset(oscal_version, "complete", "processed", json.dumps(metaschema_tree, indent=2), filename=f"OSCAL_{oscal_version}_metaschema.json")
 
-    return metaschema_tree
+    return status
 # --------------------------------------------------------------------------
 def clean_none_values_recursive(dictionary):
     """
@@ -446,8 +462,8 @@ class MetaschemaParser:
             metaschema_tree["nodes"] = self.recurse_metaschema(self.oscal_model, "define-assembly", context=context)
 
         except Exception as e:
-            logger.error(f"Error building metaschema tree: {e}")
             metaschema_tree = {}
+            logger.error(f"Error building metaschema tree: {e}")
             
         try:    
             if metaschema_tree:
@@ -470,6 +486,7 @@ class MetaschemaParser:
 
         except Exception as e:
             logger.error(f"Error saving metaschema tree: {e}")
+        logger.debug(f"Metaschema tree built for {self.oscal_model} with {len(metaschema_tree.get('nodes', []))} nodes.")
 
         return metaschema_tree
 
@@ -592,7 +609,7 @@ class MetaschemaParser:
 
 
     # ------------------------------------------------------------------------- 
-    def recurse_metaschema(self, name, structure_type="define-assembly", parent="", ignore_local=False, already_searched=[], context=None, skip_children=False):
+    def recurse_metaschema(self, name, structure_type="define-assembly", parent="", ignore_local=False, already_searched=[], context=None, skip_children=False, use_name=None):
         """
         Recursively build the metaschema tree.
         This function processes the XML tree and extracts significant nodes
@@ -648,6 +665,8 @@ class MetaschemaParser:
         xpath_query = f"./{structure_type}"
         no_local = misc.iif(ignore_local, " and not(@scope='local')", "")
         xpath_query += f"[@{misc.iif(structure_type in ["field", "flag", "assembly"], "ref", "name")}='{name}'{no_local}]"
+        if use_name is not None:
+            xpath_query += f"[./use-name='{use_name}']"
         if DEBUG_OBJECT == name:
             logger.info(f"DEBUG: Looking for {structure_type}: {name} in {self.oscal_model} with xpath: {xpath_query}")
 
@@ -663,7 +682,7 @@ class MetaschemaParser:
                     metaschema_node = self.look_in_imports(name, structure_type, parent=parent, ignore_local=ignore_local, already_searched=already_searched)
             else:
                 # assembly, field, and flag should always be found in the passed context.
-                logger.debug(f"Did not find <{structure_type}: '{name}' ... > in {data.xml_to_string(context)}")
+                pass
         else:
             # .............................................................................
             if isinstance(result, list):
@@ -677,7 +696,7 @@ class MetaschemaParser:
 
             metaschema_node["name"]                = name # should always be present
             metaschema_node["structure-type"]      = structure_type.replace("define-", "")
-            metaschema_node["use-name"]            = self.graceful_override(metaschema_node["use-name"],            "./use-name/text()", definition_obj)
+            metaschema_node["use-name"]            = self.graceful_override(metaschema_node["use-name"], "./use-name/text()", definition_obj)
             if metaschema_node["use-name"] is None or metaschema_node["use-name"] == "":
                 metaschema_node["use-name"] = metaschema_node["name"]
             if metaschema_node["path"] is None or metaschema_node["path"] == "":
@@ -1022,10 +1041,11 @@ class MetaschemaParser:
     
     # -------------------------------------------------------------------------
     def handle_children(self, name, structure_type, metaschema_node, context, handle_choice=0):
-        global global_unhandled_report, global_counter
         """Handle model specification for defined assemblies"""
+        global global_unhandled_report, global_counter
         hold_children = metaschema_node.get("children", [])
         choice_count = 0
+        child_use_name = None
 
         if structure_type == "define-assembly":
             xExpr = f"./model"
@@ -1046,6 +1066,7 @@ class MetaschemaParser:
                             child_name = child.attrib.get("name", "")
                         elif child_structure_type in ["field", "assembly"]:
                             child_name = child.attrib.get("ref", "")
+                            child_use_name = self.graceful_override(child_use_name, "./use-name/text()", child)
                         elif child_structure_type in ["choice", "any"]:
                             logger.debug(f"FOUND {child_structure_type} in {metaschema_node["path"]}")
                             child_name = f"{child_structure_type.upper()}"
@@ -1055,11 +1076,11 @@ class MetaschemaParser:
 
                         if child_structure_type in ["define-field", "define-assembly", "field", "assembly"]:
 
-                            meta_object = self.recurse_metaschema(child_name, child_structure_type, parent=metaschema_node["path"], ignore_local=False, context=children, already_searched=[])
+                            meta_object = self.recurse_metaschema(child_name, child_structure_type, parent=metaschema_node["path"], ignore_local=False, context=children, already_searched=[], use_name=child_use_name)
                             if meta_object is not None and meta_object != {}:
                                 hold_children.append(meta_object)
                             else:
-                                logger.error(f"Unexpected empty return at {metaschema_node["path"]} for child: {child_structure_type} {child_name}")
+                                logger.warning(f"Unexpected empty return at {metaschema_node["path"]} for child: {child_structure_type} {child_name}")
 
 
                         elif child_structure_type == "choice":
@@ -1110,7 +1131,12 @@ if __name__ == "__main__":
 
     try:
         exit_code = asyncio.run(parse_metaschema(oscal_version="v1.1.3"))
-        logger.info(f"Application exited with code: {exit_code}")
+        if exit_code == 0:
+            logger.info("Application exited successfully.")
+        elif exit_code == 1:
+            logger.warning("Application exited with warnings.")
+        else:
+            logger.error(f"Unexpected exit value of type {str(type(exit_code))}")
         sys.exit(exit_code)
     except Exception as e:
         logger.exception(f"Fatal error: {e}")

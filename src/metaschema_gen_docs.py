@@ -5,7 +5,14 @@ from html import escape
 import html
 from loguru import logger
 from time import sleep
+from oscal_support import *
 from common import *
+
+""" OSCAL Metaschema Documentation Generator
+This script generates HTML documentation for OSCAL metaschemas.
+It processes JSON files containing the metaschema definitions and generates a collapsible HTML tree view for each schema.
+It supports multiple formats (XML, JSON, YAML) and can handle various OSCAL versions.
+"""
 
 DATA_LOCATION = "./"
 
@@ -15,9 +22,43 @@ DATA_LOCATION = "./"
 # - Handle unwrapped on output
 
 
-# =============================================================================
-# CREATES A COLLAPSIBLE HTML TREE FROM A FULLY RESOLVED JSON METASCHEMA OBJECT
-# =============================================================================
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+async def generate_documentation(support=None, oscal_version=None) -> int:
+    """
+    Generate documentation from processed OSCAL metaschema.
+    """
+
+    status = False
+    ret_value = 1
+
+    # If support object is not provided, we have to instantiate it.
+    if support is None:
+        base_url = "./support/support.oscal"
+        support = await setup_support(base_url)
+
+    if support.ready:
+        logger.debug("Support file is ready.")
+        status = True
+    else:
+        logger.error("Support object is not ready.")
+
+    # If the support object is ready, we can proceed.
+    if status:
+        logger.info("Generating documentation from OSCAL metaschema.")
+        # Generate the documentation
+        pass
+
+    if status:
+        ret_value = 0
+    else:
+        logger.error("Failed to generate documentation. Exiting with error code 1.")
+        ret_value = 1
+
+    return ret_value
+
+
+
+
 def generate_tree_view(metaschema_tree, format):
     """Generate HTML with collapsible tree from OSCAL JSON data."""
     

@@ -298,9 +298,12 @@ class OSCAL_support:
         return models
 
     # -------------------------------------------------------------------------
-    async def add_asset(self, oscal_version, model_name, asset_type, content):
+    async def add_asset(self, oscal_version, model_name, asset_type, content, filename=None):
         """
-        Add a new asset to the support database.
+        Add an asset to the support database. If the asset already exists, it will be replaced.
+        This method supports both string and bytes content types.
+        If the content is a string, it will be converted to bytes.
+        If the content is already in bytes, it will be used as is.
         Args:
             oscal_version (str): The OSCAL version (e.g., "v1.0.0").
             model_name (str): The OSCAL model name (e.g., "system-security-plan").
@@ -310,30 +313,70 @@ class OSCAL_support:
             bool: True if the asset was added successfully, False otherwise.
         """
         status = False
-        uuid_value = str(uuid.uuid4())
-        
-        # Insert into oscal_support table
-        if await self.db.insert("oscal_support", {
-            "version": oscal_version,
-            "model": model_name,
-            "type": asset_type,
-            "filecache_uuid": uuid_value
-        }):
-            # Cache the file content
-            attributes = {
-                "filename": f"{model_name}_{asset_type}.xml",
-                "original_location": "",
-                "mime_type": "application/octet-stream",
-                "file_type": asset_type,
-                "acquired": misc.oscal_date_time_with_timezone()
-            }
-            if await self.db.cache_file(content, uuid_value, attributes):
-                status = True
-                logger.info(f"Added asset {model_name} ({asset_type}) for version {oscal_version}.")
-            else:
-                logger.error(f"Failed to cache file for {model_name} ({asset_type}) for version {oscal_version}.")
+        logger.debug(f"Add asset {model_name} ({asset_type}) for version {oscal_version}.")
+        if isinstance(content, str):
+            # If content is a string, convert it to bytes
+            content = content.encode('utf-8')
+            status = True  # Content is now in bytes
+        elif isinstance(content, bytes):
+            status = True  # Content is already in bytes
         else:
-            logger.error(f"Failed to insert asset {model_name} ({asset_type}) for version {oscal_version} into database.")
+            logger.error(f"Content for {model_name} ({asset_type}) must be bytes or a string. Received type: {type(content)}")
+        # Check if the version is valid
+
+        if status and self.is_valid_version(oscal_version):
+            status = True
+        else:
+            logger.error(f"OSCAL version {oscal_version} is not valid or supported.")
+            status = False
+
+        if status:
+            filecache_uuid = None
+            attributes = {}
+            attributes["filename"] = filename if filename else f"{model_name}_{asset_type}"
+            attributes["original_location"] = ""
+            attributes["mime_type"] = "application/octet-stream"
+            attributes["file_type"] = asset_type
+            attributes["acquired"] = misc.oscal_date_time_with_timezone()
+
+
+            # Check if the asset already exists
+            query = f"SELECT filecache_uuid FROM oscal_support WHERE version = '{oscal_version}' and model = '{model_name}' and type = '{asset_type}'"
+            results = await self.db.query(query)
+            if results is not None and len(results) > 0:
+                filecache_uuid = results[0].get("filecache_uuid", None)
+                if filecache_uuid:
+                    logger.debug(f"Asset {model_name} ({asset_type}) for version {oscal_version} already exists with UUID {filecache_uuid}.")
+            else:
+                logger.debug(f"No existing asset found for {model_name} ({asset_type}) for version {oscal_version}. Proceeding to insert.")
+
+            if filecache_uuid:
+                # If the asset already exists, update it
+                logger.debug(f"Updating existing asset {model_name} ({asset_type}) for version {oscal_version} with UUID {filecache_uuid}.")
+
+                # Cache the file content
+                if await self.db.cache_file(content, filecache_uuid, attributes):
+                    status = True
+                    logger.info(f"Updated asset {model_name} ({asset_type}) for version {oscal_version}.")
+                else:
+                    logger.error(f"Failed to cache updated file for {model_name} ({asset_type}) for version {oscal_version}.")
+            else:
+                logger.debug(f"Adding new asset {model_name} ({asset_type}) for version {oscal_version} with UUID {filecache_uuid}.")
+                filecache_uuid = str(uuid.uuid4())
+
+                # Cache the file content
+                if await self.db.cache_file(content, filecache_uuid, attributes):
+                    status = True
+                    await self.db.insert("oscal_support", {
+                        "version": oscal_version,
+                        "model": model_name,
+                        "type": asset_type,
+                        "filecache_uuid": filecache_uuid
+                    })
+
+                    logger.info(f"Added asset {model_name} ({asset_type}) for version {oscal_version}.")
+                else:
+                    logger.error(f"Failed to cache file for {model_name} ({asset_type}) for version {oscal_version}.")
 
         return status
 
@@ -482,6 +525,7 @@ class OSCAL_support:
     # -------------------------------------------------------------------------
     async def __process_single_asset(self, version, asset, pattern):
         """Helper method to process a single asset"""
+        status = False
         asset_name = asset.get("name", "")
         asset_URL = asset.get("browser_download_url", "")
         model_name = asset_name.replace("oscal_", "").replace(pattern, "")
@@ -491,12 +535,10 @@ class OSCAL_support:
         if model_name == "poam": model_name = "plan-of-action-and-milestones"
         
         uuid_value = str(uuid.uuid4())
-        # acquired = misc.oscal_date_time_with_timezone()
         
         self.__status_messages(f"Downloading {asset_name}...")
         
         # Perform database inserts
-        
         await self.db.insert("oscal_support", {
             "version": version,
             "model": model_name,
@@ -504,17 +546,8 @@ class OSCAL_support:
             "filecache_uuid": uuid_value
         })
         
-
         # Download file content asynchronously
         content = await network.async_download_file(asset_URL, asset_name)
-
-        # await self.db.insert("filecache", {
-        #     "uuid": uuid_value,
-        #     "filename": asset_name,
-        #     "original_location": asset_URL,
-        #     "acquired": acquired
-        # })
-
 
         if content:
             attributes = {

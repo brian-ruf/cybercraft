@@ -45,8 +45,28 @@ async def generate_documentation(support=None, oscal_version=None) -> int:
     # If the support object is ready, we can proceed.
     if status:
         logger.info("Generating documentation from OSCAL metaschema.")
-        # Generate the documentation
-        pass
+
+        if oscal_version is None: # If no version is specified, process all supported versions.
+            logger.info("Processing all supported OSCAL versions.")
+            for version in support.versions.keys():
+                logger.info(f"Version: {version}")
+                status = await parse_metaschema_specific(support, version)
+                if not status:
+                    logger.error(f"Failed to parse metaschema for version {version}.")
+                    break
+
+        elif oscal_version in support.versions: # If a valid version is specified, process only that version.
+            logger.info(f"Processing OSCAL version: {oscal_version}")
+            status = await parse_metaschema_specific(support, oscal_version)
+
+        else: # If an invalid version is specified, log an error and exit.
+            logger.error(f"Specified version {oscal_version} is not supported. Available versions: {', '.join(support.versions.keys())}")
+            status = False
+
+
+
+
+
 
     if status:
         ret_value = 0
@@ -56,9 +76,11 @@ async def generate_documentation(support=None, oscal_version=None) -> int:
 
     return ret_value
 
+# -------------------------------------------------------------------------
 
 
 
+# -------------------------------------------------------------------------
 def generate_tree_view(metaschema_tree, format):
     """Generate HTML with collapsible tree from OSCAL JSON data."""
     

@@ -165,6 +165,13 @@ async def parse_metaschema_specific(support, oscal_version):
         logger.info(f"{GREEN}Successfully parsed all {oscal_version} metaschema models. Adding to support module.{RESET}")
         status = await support.add_asset(oscal_version, "complete", "processed", json.dumps(metaschema_tree, indent=2), filename=f"OSCAL_{oscal_version}_metaschema.json")
 
+        # # save to a JSON file
+        output_file = f"{oscal_version}_complete_metaschema.json"
+        with open(output_file, 'w', encoding='utf-8') as f:
+            json.dump(metaschema_tree, f, indent=2)
+
+
+
     return status
 # --------------------------------------------------------------------------
 def clean_none_values_recursive(dictionary):
@@ -473,10 +480,6 @@ class MetaschemaParser:
 
                 prefix = f"OSCAL_{self.oscal_version}_{self.oscal_model}"
 
-                # # save to a JSON file
-                # output_file = f"{prefix}_FULLY_RESOLVED_metaschema.json"
-                # with open(output_file, 'w', encoding='utf-8') as f:
-                #     json.dump(metaschema_tree, f, indent=2)
 
 
                 # output_file = f"{prefix}_unhandled_report.json"

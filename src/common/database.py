@@ -72,6 +72,7 @@ class Database:
         ret_val += f"Database Target: {self.target}" 
         ret_val += f"Status: {misc.iff(self.status, 'Ready', 'Not Ready')}" 
         return ret_val
+
     # -------------------------------------------------------------------------
     def __del__(self):
         if self.conn:
@@ -104,7 +105,6 @@ class Database:
                 status = status and table_exists
 
         return status
-
 
     # -------------------------------------------------------------------------
     def table_exists(self, name):
@@ -144,6 +144,7 @@ class Database:
         except (Exception, BaseException) as error:
             logger.error(f"Unrecognized error checking for table {name} ({type(error).__name__}): {str(error)}")
         return status
+
     # -------------------------------------------------------------------------
     def record_count(self, table, where_clause):
         """
@@ -222,6 +223,8 @@ class Database:
         # TODO Add fallback error handling
 
         return status
+
+    # -------------------------------------------------------------------------
     async def query(self, SQL_statement):
         """
         Executes a query and returns the results.
@@ -284,8 +287,8 @@ class Database:
             logger.error("Table name not found in table definition.")
 
         return status
-    # -------------------------------------------------------------------------
 
+    # -------------------------------------------------------------------------
     async def insert(self, table_name, table_fields, table_blob_fields={}):
         """
         Inserts a record into a table.
@@ -362,6 +365,7 @@ class Database:
                 status = await type_sqlite3.store_blob_to_db(self.conn, uuid, content, attributes )
             
         return status
+
     # -------------------------------------------------------------------------
     async def retrieve_file(self, uuid):
         """
@@ -387,7 +391,6 @@ class Database:
                 logger.debug(f"File with uuid='{uuid}' not found in the database.")
 
         return ret_value
-    # -------------------------------------------------------------------------
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def oscal_datatype(datatype):

@@ -81,7 +81,7 @@ async def generate_documentation(support=None, oscal_version=None) -> int:
 
 
 # -------------------------------------------------------------------------
-def generate_tree_view(metaschema_tree, format):
+def generate_tree_view(metaschema_model_tree, oscal_version, format):
     """Generate HTML with collapsible tree from OSCAL JSON data."""
     
     style = """
@@ -145,14 +145,14 @@ def generate_tree_view(metaschema_tree, format):
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{metaschema_tree["oscal_version"]} {{metaschema_tree["oscal_model"]}} ({format.upper()})</title>
+    <title>{oscal_version} {metaschema_model_tree.get("schema_name", "[EMPTY]")} ({format.upper()})</title>
     <style>
 {style}
     </style>
 </head>
 <body>
-    <h1>{metaschema_tree["schema_name"]} {format.upper()}</h1>
-    <h3>OSCAL Version: {metaschema_tree["oscal_version"]}</h3>
+    <h1>{metaschema_model_tree.get("schema_name", "EMPTY")} {format.upper()}</h1>
+    <h3>OSCAL Version: {oscal_version}</h3>
     
     <div class="tree-view">
 """
@@ -161,7 +161,11 @@ def generate_tree_view(metaschema_tree, format):
     match format:
         case "xml":
             logger.info("Processing XML format")
-            html += process_xml_element(metaschema_tree["nodes"], level=0)
+            if "nodes" in metaschema_model_tree:
+                html += process_xml_element(metaschema_model_tree["nodes"], level=0)
+            else:
+                html += "<p>Metaschema model is empty.</p>"
+                logger.error("No 'nodes' found in the metaschema model tree.")
         case "json" | "yaml":
             pass
             # html += process_json_element(metaschema_tree["nodes"], format, level=0)
@@ -350,7 +354,8 @@ def process_xml_element(element, level=0):
 def main():
     ret_value = False
 
-    file_pattern = f"{DATA_LOCATION}/OSCAL*metaschema.json"
+    file_pattern = f"{DATA_LOCATION}/v*_complete_metaschema.json"
+
     # For each file that matches the pattern
     for file_path in glob.glob(file_pattern):
         logger.info(f"Processing file: {file_path}")
@@ -359,14 +364,15 @@ def main():
         with open(file_path, 'r', encoding='utf-8') as f:
             metaschema_tree = json.load(f)
 
-        prefix = f"OSCAL_{metaschema_tree["oscal_version"]}_{metaschema_tree["oscal_model"]}"
-
+        print(f"OSCAL_{metaschema_tree["oscal_version"]}")
 
         for format in ["xml"]: # , "json", "yaml"]:
-            html_output = generate_tree_view(metaschema_tree, format=format)
-            output_file = f"{DATA_LOCATION}/{prefix}_outline_{format}.html"
-            with open(output_file, 'w', encoding='utf-8') as f:
-                f.write(html_output)
+            for model in metaschema_tree["oscal_models"]:
+                prefix = f"OSCAL_{metaschema_tree['oscal_version']}_{model}_{format}"
+                html_output = generate_tree_view(metaschema_tree["oscal_models"][model], metaschema_tree["oscal_version"], format=format)
+                output_file = f"{DATA_LOCATION}/{prefix}_outline_{format}.html"
+                with open(output_file, 'w', encoding='utf-8') as f:
+                    f.write(html_output)
 
     return ret_value
 

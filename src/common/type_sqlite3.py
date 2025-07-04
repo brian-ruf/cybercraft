@@ -315,17 +315,8 @@ def get_record_metadata(conn, table_name: str, identifier: str) -> Dict:
 async def store_blob_to_db(conn, identifier: str, blob, attributes: dict) -> bool:
     """
     Store a binary large object (BLOB) in the database.
-    
-    Args:
-        conn: SQLite connection object
-        table_name: Name of the table containing the record
-        identifier: UUID of the record to store the BLOB
-        blob: The binary data to store
-    
-    Returns:
-        bool: True if the BLOB was stored successfully, False otherwise
+    If the UUID exists, update the record. Otherwise, insert a new one.
     """
-
     cursor = conn.cursor()
     ok_to_store = False
     datatype = None
@@ -376,12 +367,24 @@ async def store_blob_to_db(conn, identifier: str, blob, attributes: dict) -> boo
             logger.error(f"Table '{FILE_CACHE_TABLE}' does not exist in the database")
             return False
 
-        # Update the record with the BLOB
-        logger.debug(f"Storing BLOB data in table '{FILE_CACHE_TABLE}' with identifier '{identifier}'")
-        query = f"""INSERT INTO {FILE_CACHE_TABLE} 
-            (uuid, content, datatype, compressed, acquired, filename, original_location, file_type, mime_type)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"""
-        cursor.execute(query, (identifier, blob, datatype, compressed, acquired, filename, original_location, file_type, mime_type))
+        # Check if the record exists
+        cursor.execute(f"SELECT 1 FROM {FILE_CACHE_TABLE} WHERE uuid = ?", (identifier,))
+        exists = cursor.fetchone() is not None
+
+        if exists:
+            logger.debug(f"Updating existing BLOB record in '{FILE_CACHE_TABLE}' with identifier '{identifier}'")
+            query = f"""UPDATE {FILE_CACHE_TABLE}
+                        SET content = ?, datatype = ?, compressed = ?, acquired = ?, filename = ?, original_location = ?, file_type = ?, mime_type = ?
+                        WHERE uuid = ?"""
+            params = (blob, datatype, compressed, acquired, filename, original_location, file_type, mime_type, identifier)
+        else:
+            logger.debug(f"Inserting new BLOB record in '{FILE_CACHE_TABLE}' with identifier '{identifier}'")
+            query = f"""INSERT INTO {FILE_CACHE_TABLE} 
+                        (uuid, content, datatype, compressed, acquired, filename, original_location, file_type, mime_type)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"""
+            params = (identifier, blob, datatype, compressed, acquired, filename, original_location, file_type, mime_type)
+
+        cursor.execute(query, params)
         logger.debug(f"Query: {query}")
         logger.debug(f"Parameters: blob_size={len(blob) if blob else 'None'}, datatype={datatype}, compressed={compressed}, uuid={identifier}")
         

@@ -237,7 +237,7 @@ class OSCAL_support:
             model_name (str): The OSCAL model name (e.g., "system-security-plan").
             asset_type (str): The type of asset to retrieve (e.g., "xml-schema", "json-schema").
         Returns:
-            Optional[Any]: The asset content if found, None otherwise.
+            The asset content if found, None otherwise.
         """
         status = False
         filecache_uuid = None

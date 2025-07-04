@@ -748,10 +748,9 @@ class MetaschemaParser:
             else:
                 metaschema_node["source"] = [self.oscal_model]  
 
-            metaschema_node["flags"]    = self.handle_flags(metaschema_node, definition_obj, structure_type, name, parent)
-            logger.debug(f"Back from handle flags in {self.oscal_model} for {structure_type} / {name} in {parent}")
-
             if not misc.has_repeated_ending(metaschema_node["path"], f"/{metaschema_node["use-name"]}", frequency=2):
+                metaschema_node["flags"]    = self.handle_flags(metaschema_node, definition_obj, structure_type, name, parent)
+                logger.debug(f"Back from handle flags in {self.oscal_model} for {structure_type} / {name} in {parent}")
                 metaschema_node["children"] = self.handle_children(name, structure_type, metaschema_node, definition_obj)
                 logger.debug(f"Back from handle model")
             else:
@@ -760,6 +759,7 @@ class MetaschemaParser:
                 metaschema_node["structure-type"] = "recursive"
                 metaschema_node["description"] = "<b>Recursive: See parent</b>"
                 metaschema_node["children"] = []
+                metaschema_node["flags"] = []
 
         # .............................................................................
 

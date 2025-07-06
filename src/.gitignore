@@ -1,4 +1,4 @@
 resources.qrc
 resources_rc.py
-*.html
+OSCAL*.html
 *.log
